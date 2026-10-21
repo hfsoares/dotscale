@@ -163,6 +163,11 @@ class _ResultCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Último espresso', style: Theme.of(context).textTheme.titleSmall),
+            if (result.interrupted)
+              Text(
+                'A conexão caiu durante a extração; confira os números.',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             const SizedBox(height: 8),
             Table(
               defaultColumnWidth: const IntrinsicColumnWidth(),

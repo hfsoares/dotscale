@@ -35,7 +35,8 @@ void main() {
     d.hold(cup + to, secs(5));
   }
 
-  void expectDuration(Duration? actual, num seconds) => expect(actual!.inMilliseconds / 1000, closeTo(seconds, 0.3));
+  void expectDuration(Duration? actual, num seconds, {double within = 0.3}) =>
+      expect(actual!.inMilliseconds / 1000, closeTo(seconds, within));
 
   test('extração completa: tempo, bebida e ratio', () {
     shot();
@@ -105,11 +106,14 @@ void main() {
     expect(session.step, EspressoStep.idle);
   });
 
-  test('dosímetro durante a extração é ignorado', () {
+  test('dosímetro durante a extração não inicia outro espresso', () {
     d.hold(cup, secs(3));
     d.ramp(cup, cup + 10, secs(7));
     d.hold(80, s);
-    expect(session.step, EspressoStep.extracting);
+    // Trocar o que está na balança encerra a extração (tranco); o dosímetro não é reconhecido.
+    expect(session.step, EspressoStep.idle);
+    expect(session.result, isNotNull);
+    expect(session.beans, isNull);
   });
 
   test('dosímetro com resultado na tela começa outro espresso', () {
@@ -145,5 +149,48 @@ void main() {
     expect(samples.first.t, Duration.zero);
     expect(samples.last.grams, closeTo(36.0, 0.05));
     expect(samples.length, greaterThan(300));
+  });
+
+  test('levantar a balança 2 s depois do fluxo parar não infla bebida nem tempo', () {
+    d.hold(cup, secs(3));
+    d.ramp(cup, cup + 36, secs(27));
+    d.hold(cup + 36, secs(2));
+    d.readings([cup + 46, cup + 66, cup + 20, -150, -150]);
+    final r = session.result!;
+    expect(r.beverage, closeTo(36.0, 0.2));
+    expectDuration(r.extraction, 27);
+    expect(r.interrupted, isFalse);
+  });
+
+  test('extração com ruído: bebida e tempo corretos', () {
+    d.noisy = true;
+    shot();
+    final r = session.result!;
+    expect(r.beverage, closeTo(36.0, 0.15));
+    expect(r.extraction.inMilliseconds / 1000, closeTo(27, 0.6));
+  });
+
+  test('desconexão e xícara retirada: resultado marcado como interrompido', () {
+    d.hold(cup, secs(3));
+    d.ramp(cup, cup + 15, secs(11));
+    session.connectionLost();
+    d.wait(secs(20));
+    d.hold(0, secs(5));
+    final r = session.result!;
+    expect(r.interrupted, isTrue);
+    expect(r.beverage, closeTo(15.0, 0.4));
+  });
+
+  test('gotas na pré-infusão não puxam o início da extração para trás', () {
+    d.hold(cup, secs(1));
+    session.startTimer(d.now);
+    d.hold(cup, secs(2));
+    d.ramp(cup, cup + 0.4, secs(0.5)); // algumas gotas durante o vapor
+    d.hold(cup + 0.4, secs(6));
+    d.ramp(cup + 0.4, cup + 36.4, secs(27));
+    d.hold(cup + 36.4, secs(5));
+    final r = session.result!;
+    expectDuration(r.extraction, 27, within: 0.4);
+    expect(r.preInfusion!.inMilliseconds / 1000, closeTo(8.5, 0.4));
   });
 }

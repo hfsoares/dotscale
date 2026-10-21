@@ -16,6 +16,7 @@ class EspressoTuning {
     this.dripMinNet = 1.0,
     this.endWindow = const Duration(seconds: 4),
     this.endMinRise = 0.2,
+    this.handlingJump = 3.0,
     this.conflictWithin = 3.0,
   });
 
@@ -50,6 +51,10 @@ class EspressoTuning {
   /// Fim: o líquido não sobe mais que [endMinRise] em [endWindow].
   final Duration endWindow;
   final double endMinRise;
+
+  /// Variação maior que isso entre duas leituras (~100 ms) não é café: é a balança sendo
+  /// levantada ou a xícara retirada. Na extração, encerra no último ponto plausível.
+  final double handlingJump;
 
   /// No cadastro, avisa de recipientes a menos disso.
   final double conflictWithin;

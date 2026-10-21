@@ -152,4 +152,17 @@ void main() {
     expect(find.text('Coloque o dosímetro'), findsOneWidget);
     await finish(tester);
   });
+
+  testWidgets('resultado interrompido mostra aviso', (tester) async {
+    await pump(tester);
+    await toCup(tester);
+    await hold(tester, 120, readings: 10);
+    await ramp(tester, 120, 135, 110);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.reconnecting));
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
+    t = t.add(const Duration(seconds: 20));
+    await hold(tester, 0);
+    expect(find.text('A conexão caiu durante a extração; confira os números.'), findsOneWidget);
+    await finish(tester);
+  });
 }

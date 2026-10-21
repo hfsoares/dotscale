@@ -21,6 +21,9 @@ class EspressoResult {
   final String? cupName;
   final List<WeightSample> samples;
 
+  /// A conexão caiu durante a extração: os números podem estar errados.
+  final bool interrupted;
+
   const EspressoResult({
     required this.dose,
     required this.beans,
@@ -29,6 +32,7 @@ class EspressoResult {
     required this.preInfusion,
     required this.cupName,
     required this.samples,
+    this.interrupted = false,
   });
 
   double get ratio => beverage / dose;
@@ -65,14 +69,13 @@ class EspressoSession {
   final List<WeightSample> _samples = [];
   DateTime? _timerStart;
   DateTime? _extractionStart;
-  // Primeira leitura depois da última com líquido ≤ dripMaxDip: onde as gotas começaram.
-  DateTime? _firstAfterFlatAt;
   // Candidato a gotas: começou quando o líquido passou de dripMinNet.
   ({DateTime at, double net})? _dripCandidate;
   double _dripRunningMax = 0;
   // Referência do fim: última subida de pelo menos endMinRise.
   ({DateTime at, double net})? _lastRise;
-  double _maxNet = 0;
+  double? _prevNet;
+  bool _hadGap = false;
 
   EspressoStep get step => _step;
   double? get rawGrams => _raw;
@@ -148,11 +151,6 @@ class EspressoSession {
   void _record(DateTime at, double grams) => _samples.add(WeightSample(at.difference(_cupTaredAt!), grams - _offset));
 
   void _detectDrips(DateTime at, double net) {
-    if (net <= tuning.dripMaxDip) {
-      _firstAfterFlatAt = null;
-    } else {
-      _firstAfterFlatAt ??= at;
-    }
     final candidate = _dripCandidate;
     if (candidate == null) {
       if (net > tuning.dripMinNet) {
@@ -175,14 +173,41 @@ class EspressoSession {
       return;
     }
     _dripCandidate = null;
-    _extractionStart = _firstAfterFlatAt ?? candidate.at;
+    _extractionStart = _riseStart(candidate.at);
     _lastRise = (at: at, net: net);
-    _maxNet = net;
+    _prevNet = net;
     _step = EspressoStep.extracting;
   }
 
+  /// Onde a subida começou: a primeira leitura, até 2 janelas antes do candidato, que se
+  /// descola da linha de base (mediana do segundo anterior). Gotas soltas da pré-infusão
+  /// mudam a linha de base em vez de puxar o início para trás.
+  DateTime _riseStart(DateTime candidateAt) {
+    final from = candidateAt.subtract(tuning.dripWindow * 2);
+    final baseFrom = from.subtract(const Duration(seconds: 1));
+    final base = _median([
+      for (final x in _samples)
+        if (!_at(x).isBefore(baseFrom) && _at(x).isBefore(from)) x.grams,
+    ]);
+    for (final x in _samples) {
+      if (!_at(x).isBefore(from) && x.grams > (base ?? 0) + tuning.dripMaxDip) return _at(x);
+    }
+    return candidateAt;
+  }
+
+  DateTime _at(WeightSample x) => _cupTaredAt!.add(x.t);
+
+  static double? _median(List<double> values) {
+    if (values.isEmpty) return null;
+    final sorted = [...values]..sort();
+    return sorted[sorted.length ~/ 2];
+  }
+
   void _detectEnd(DateTime at, double net, {required bool gap}) {
-    if (net > _maxNet) _maxNet = net;
+    final jump = (net - _prevNet!).abs() > tuning.handlingJump;
+    _prevNet = net;
+    if (gap) _hadGap = true;
+    if (jump) return _finish(before: at);
     if (gap) {
       // A conexão caiu: o tempo sem leituras não conta como "parou de subir".
       _lastRise = (at: at, net: net);
@@ -192,16 +217,36 @@ class EspressoSession {
       _lastRise = (at: at, net: net);
       return;
     }
-    if (at.difference(_lastRise!.at) < tuning.endWindow) return;
+    if (at.difference(_lastRise!.at) >= tuning.endWindow) _finish(before: at.add(const Duration(microseconds: 1)));
+  }
+
+  /// Fecha a extração na última subida. A bebida é a mediana do patamar entre essa subida e
+  /// [before] (exclusive, para deixar de fora o tranco de levantar a balança); sem patamar,
+  /// a mediana das leituras logo antes da subida.
+  void _finish({required DateTime before}) {
     final end = _lastRise!.at;
+    final kept = [
+      for (final x in _samples)
+        if (!_at(x).isAfter(end)) x,
+    ];
+    final plateau = [
+      for (final x in _samples)
+        if (!_at(x).isBefore(end) && _at(x).isBefore(before)) x.grams,
+    ];
+    final tail = [
+      for (final x in kept)
+        if (end.difference(_at(x)) < const Duration(milliseconds: 300)) x.grams,
+    ];
+    final beverage = _median(plateau.length >= 3 ? plateau : tail) ?? _lastRise!.net;
     _result = EspressoResult(
       dose: _dose!,
       beans: _beans,
-      beverage: (_maxNet * 10).round() / 10,
+      beverage: (beverage * 10).round() / 10,
       extraction: end.difference(_extractionStart!),
       preInfusion: _timerStart == null ? null : _extractionStart!.difference(_timerStart!),
       cupName: _cupName,
-      samples: List.unmodifiable(_samples.where((x) => x.t <= end.difference(_cupTaredAt!))),
+      samples: List.unmodifiable(kept),
+      interrupted: _hadGap,
     );
     _clearSession();
   }
@@ -283,7 +328,6 @@ class EspressoSession {
   void _resetCupTracking() {
     _cupTaredAt = null;
     _samples.clear();
-    _firstAfterFlatAt = null;
     _dripCandidate = null;
   }
 
@@ -308,6 +352,7 @@ class EspressoSession {
     _timerStart = null;
     _extractionStart = null;
     _lastRise = null;
-    _maxNet = 0;
+    _prevNet = null;
+    _hadGap = false;
   }
 }
