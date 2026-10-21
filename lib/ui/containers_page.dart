@@ -110,6 +110,7 @@ class _RegisterDialogState extends State<_RegisterDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true,
       title: const Text('Cadastrar recipiente'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

@@ -46,6 +46,22 @@ void main() {
     expect(registerButton(tester).onPressed, isNotNull);
   });
 
+  testWidgets('formulário de cadastro cabe com o teclado aberto', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340); // Galaxy S24, 3x
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await pump(tester, [doser]);
+    await hold(tester, 81);
+    await tester.tap(find.text('Cadastrar recipiente'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 1000); // teclado
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Salvar').hitTestable(), findsOneWidget);
+  });
+
   testWidgets('cadastrar grava nome e tipo', (tester) async {
     await pump(tester);
     await hold(tester, 152.3);
