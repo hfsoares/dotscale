@@ -91,6 +91,8 @@ class EspressoSession {
     if (net == null || beans == null || !fromGrinderCup) return net;
     for (final cup in containers.where((c) => c.kind == ContainerKind.grinderCup)) {
       final dose = _raw! - cup.grams;
+      // Dose já reconhecida e o copinho ainda na balança: o valor estável, sem o ruído.
+      if (_dose != null && (dose - _dose!).abs() <= tuning.matchTolerance) return _dose;
       if (dose >= -tuning.matchTolerance && dose <= beans + tuning.groundsAbove + tuning.minObject) return dose;
     }
     return net;

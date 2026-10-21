@@ -91,6 +91,13 @@ void main() {
     expect(session.displayGrams, 0.0);
   });
 
+  test('com a dose reconhecida, o número grande não oscila com o ruído', () {
+    weighBeans();
+    d.hold(57.8, s);
+    d.readings([57.7, 57.9, 57.7]);
+    expect(session.displayGrams, 17.8);
+  });
+
   test('sem copinho, o número grande é o líquido', () {
     weighBeans();
     session.useBeansAsDose();

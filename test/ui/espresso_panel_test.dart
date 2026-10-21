@@ -154,6 +154,8 @@ void main() {
     await tester.pump();
     expect(find.text('Tarar'), findsOneWidget);
     expect(find.text('Pronto — inicie a extração'), findsNothing);
+    final screen = tester.getSize(find.byType(Scaffold)).width;
+    expect(tester.getCenter(find.text('Tarar')).dx, closeTo(screen / 2, 30));
     await finish(tester);
   });
 

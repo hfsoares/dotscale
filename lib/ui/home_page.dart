@@ -187,37 +187,40 @@ class _LiveView extends StatelessWidget {
     final showTare = espresso.session.step == EspressoStep.idle;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Column(
-        children: [
-          if (!espresso.hasRequiredContainers) ...[
-            const Text(
-              'Cadastre o dosímetro e o copinho do moedor para o espresso automático.',
-              textAlign: TextAlign.center,
-            ),
-            OutlinedButton(onPressed: () => _openContainers(context, espresso), child: const Text('Recipientes')),
-            const SizedBox(height: 16),
-          ],
-          EspressoPanel(espresso: espresso, live: controller.isLive),
-          const SizedBox(height: 8),
-          Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
-          if (showTare) ...[
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: controller.isLive ? controller.tare : null,
-              icon: const Icon(Icons.exposure_zero),
-              label: const Text('Tarar'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(220, 72),
-                textStyle: Theme.of(context).textTheme.headlineSmall,
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          children: [
+            if (!espresso.hasRequiredContainers) ...[
+              const Text(
+                'Cadastre o dosímetro e o copinho do moedor para o espresso automático.',
+                textAlign: TextAlign.center,
               ),
-            ),
-            if (controller.tareError != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              OutlinedButton(onPressed: () => _openContainers(context, espresso), child: const Text('Recipientes')),
+              const SizedBox(height: 16),
+            ],
+            EspressoPanel(espresso: espresso, live: controller.isLive),
+            const SizedBox(height: 8),
+            Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
+            if (showTare) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: controller.isLive ? controller.tare : null,
+                icon: const Icon(Icons.exposure_zero),
+                label: const Text('Tarar'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(220, 72),
+                  textStyle: Theme.of(context).textTheme.headlineSmall,
+                ),
               ),
+              if (controller.tareError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
