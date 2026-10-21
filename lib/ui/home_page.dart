@@ -40,7 +40,14 @@ class HomePage extends StatelessWidget {
       case ConnectionPhase.bluetoothOff:
       case ConnectionPhase.permissionDenied:
       case ConnectionPhase.error:
-        return _Problem(message: status.message ?? _phaseText(status.phase), onRetry: controller.connection.reconnectLast);
+        return _Problem(
+          message: status.message ?? _phaseText(status.phase),
+          onRetry: controller.connection.reconnectLast,
+          onScan: () async {
+            await controller.connection.disconnect();
+            await controller.connection.startScan();
+          },
+        );
       case ConnectionPhase.connecting:
       case ConnectionPhase.pairing:
         return const Center(child: CircularProgressIndicator());
@@ -165,10 +172,11 @@ class _ScanView extends StatelessWidget {
 }
 
 class _Problem extends StatelessWidget {
-  const _Problem({required this.message, required this.onRetry});
+  const _Problem({required this.message, required this.onRetry, required this.onScan});
 
   final String message;
   final VoidCallback onRetry;
+  final VoidCallback onScan;
 
   @override
   Widget build(BuildContext context) {
@@ -181,6 +189,8 @@ class _Problem extends StatelessWidget {
             Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             FilledButton(onPressed: onRetry, child: const Text('Tentar de novo')),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onScan, child: const Text('Procurar balança')),
           ],
         ),
       ),

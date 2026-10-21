@@ -19,6 +19,7 @@ void main() {
   Future<void> pump(WidgetTester tester) async {
     fake = FakeScaleConnection();
     controller = ScaleController(fake);
+    addTearDown(controller.dispose);
     await tester.pumpWidget(MaterialApp(home: HomePage(controller: controller)));
   }
 
@@ -46,6 +47,7 @@ void main() {
     expect(find.text('18.4 g'), findsOneWidget);
     expect(find.text('1.2 g/s'), findsOneWidget);
     expect(find.text('87%'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3)); // deixa o timer de peso parado expirar
   });
 
   testWidgets('conectado mostra Desconectar', (tester) async {
@@ -104,5 +106,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('A5 5A 01 01'), findsOneWidget);
     expect(find.textContaining('CRC ≠'), findsOneWidget);
+  });
+
+  testWidgets('erro oferece voltar a procurar balanças', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.error, message: 'A balança não respondeu'));
+    await tester.pump();
+    await tester.tap(find.text('Procurar balança'));
+    await tester.pump();
+    expect(fake.calls, containsAllInOrder(['disconnect', 'startScan']));
   });
 }

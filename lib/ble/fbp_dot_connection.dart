@@ -8,6 +8,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../protocol/commands.dart';
 import '../protocol/dot_event.dart';
 import '../protocol/frame_decoder.dart';
+import 'connection_messages.dart';
 import 'dot_name.dart';
 import 'last_scale_store.dart';
 import 'scale_connection.dart';
@@ -72,12 +73,9 @@ class FbpDotConnection implements ScaleConnection {
     final state = await FlutterBluePlus.adapterState
         .firstWhere((s) => s != BluetoothAdapterState.unknown)
         .timeout(const Duration(seconds: 3), onTimeout: () => BluetoothAdapterState.unknown);
-    if (state == BluetoothAdapterState.unauthorized) {
-      _setStatus(ConnectionPhase.permissionDenied, message: 'Permissão de Bluetooth negada');
-      return false;
-    }
-    if (state != BluetoothAdapterState.on) {
-      _setStatus(ConnectionPhase.bluetoothOff, message: 'Bluetooth desligado');
+    final problem = adapterProblem(state);
+    if (problem != null) {
+      _setStatus(problem.phase, message: problem.message);
       return false;
     }
     return true;
@@ -140,7 +138,7 @@ class FbpDotConnection implements ScaleConnection {
       await _teardown(disconnectDevice: true);
       _setStatus(
         _isPermissionError(e) ? ConnectionPhase.permissionDenied : ConnectionPhase.error,
-        message: _isPermissionError(e) ? 'Permissão de Bluetooth negada' : _describe(e),
+        message: _isPermissionError(e) ? 'Permissão de Bluetooth negada' : describeConnectError(e),
       );
     }
   }
@@ -166,7 +164,7 @@ class FbpDotConnection implements ScaleConnection {
       try {
         await device.createBond();
       } catch (e) {
-        throw _PairingFailed(e);
+        throw PairingFailed(e);
       }
     }
 
@@ -227,6 +225,13 @@ class FbpDotConnection implements ScaleConnection {
     var delay = const Duration(seconds: 1);
     try {
       while (!_userDisconnected) {
+        // Com o Bluetooth desligado, dizer isso e esperar ele voltar em vez de tentar à toa.
+        if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) {
+          _setStatus(ConnectionPhase.bluetoothOff, message: 'Bluetooth desligado. Reconecto quando ele voltar.');
+          await FlutterBluePlus.adapterState.firstWhere((s) => s == BluetoothAdapterState.on);
+          delay = const Duration(seconds: 1);
+          if (_userDisconnected) return;
+        }
         _setStatus(ConnectionPhase.reconnecting);
         await Future<void>.delayed(delay);
         if (_userDisconnected) return;
@@ -269,13 +274,6 @@ class FbpDotConnection implements ScaleConnection {
     }
   }
 
-  String _describe(Object e) {
-    if (e is _PairingFailed) return 'Pareamento recusado ou falhou';
-    if (e is StateError) return e.message;
-    if (e is TimeoutException) return 'A balança não respondeu. Ela está ligada e perto?';
-    return 'Falha ao conectar: $e';
-  }
-
   @override
   void dispose() {
     _userDisconnected = true;
@@ -287,9 +285,4 @@ class FbpDotConnection implements ScaleConnection {
     _eventController.close();
     _frameController.close();
   }
-}
-
-class _PairingFailed implements Exception {
-  final Object cause;
-  _PairingFailed(this.cause);
 }
