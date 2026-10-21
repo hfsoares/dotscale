@@ -10,6 +10,7 @@ class FakeScaleConnection implements ScaleConnection {
   final _frames = StreamController<FrameLogEntry>.broadcast(sync: true);
   ConnectionStatus _current = const ConnectionStatus(ConnectionPhase.idle);
   final calls = <String>[];
+  Object? tareFailure;
 
   void emitStatus(ConnectionStatus s) {
     _current = s;
@@ -41,6 +42,12 @@ class FakeScaleConnection implements ScaleConnection {
   Future<void> disconnect() async => calls.add('disconnect');
   @override
   Future<void> reconnectLast() async => calls.add('reconnectLast');
+  @override
+  Future<void> tare() async {
+    calls.add('tare');
+    if (tareFailure != null) throw tareFailure!;
+  }
+
   @override
   void dispose() {}
 }

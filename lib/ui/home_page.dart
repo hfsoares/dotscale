@@ -129,7 +129,22 @@ class _LiveView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 32),
-        OutlinedButton(onPressed: controller.connection.disconnect, child: const Text('Desconectar')),
+        FilledButton.icon(
+          onPressed: controller.isLive ? controller.tare : null,
+          icon: const Icon(Icons.exposure_zero),
+          label: const Text('Tarar'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(220, 72),
+            textStyle: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ),
+        if (controller.tareError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          ),
+        const SizedBox(height: 24),
+        TextButton(onPressed: controller.connection.disconnect, child: const Text('Desconectar')),
       ],
     );
   }
