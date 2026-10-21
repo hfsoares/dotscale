@@ -58,6 +58,37 @@ void main() {
     await tester.pump(const Duration(seconds: 3)); // deixa o timer de peso parado expirar
   });
 
+  testWidgets('conexão e bateria ficam discretas na barra do topo', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected, deviceName: 'TIMEMORE_Dot_01'));
+    fake.emitEvent(_w);
+    fake.emitEvent(const BatteryReading(87));
+    await tester.pump();
+    expect(find.text('Conectado'), findsNothing);
+    final appBar = find.byType(AppBar);
+    expect(find.descendant(of: appBar, matching: find.byIcon(Icons.bluetooth_connected)), findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.byTooltip('Conectado')), findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.text('87%')), findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.byIcon(Icons.battery_6_bar)), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('bateria fraca troca o ícone', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
+    fake.emitEvent(const BatteryReading(12));
+    await tester.pump();
+    expect(find.byIcon(Icons.battery_alert), findsOneWidget);
+  });
+
+  testWidgets('pareando explica no corpo da tela', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.pairing));
+    await tester.pump();
+    expect(find.text('Pareando… confirme no aviso do sistema, se aparecer'), findsOneWidget);
+    expect(find.byTooltip('Pareando…'), findsOneWidget);
+  });
+
   testWidgets('conectado mostra Desconectar', (tester) async {
     await pump(tester);
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
@@ -91,7 +122,7 @@ void main() {
     await tester.pump();
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.reconnecting));
     await tester.pump();
-    expect(find.text('Reconectando…'), findsOneWidget);
+    expect(find.byTooltip('Reconectando…'), findsOneWidget);
     final opacity = tester.widget<Opacity>(
       find.ancestor(of: find.text('18.4 g'), matching: find.byType(Opacity)).first,
     );

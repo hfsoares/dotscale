@@ -25,6 +25,9 @@ class HomePage extends StatelessWidget {
           appBar: AppBar(
             title: Text(status.deviceName?.isNotEmpty == true ? status.deviceName! : 'DotScale'),
             actions: [
+              _ConnectionIcon(phase: status.phase),
+              if (status.phase == ConnectionPhase.connected && controller.batteryPercent != null)
+                _Battery(percent: controller.batteryPercent!),
               IconButton(
                 tooltip: 'Recipientes',
                 icon: const Icon(Icons.coffee),
@@ -35,7 +38,6 @@ class HomePage extends StatelessWidget {
           body: SafeArea(
             child: Column(
               children: [
-                _StatusBar(status: status),
                 Expanded(child: _body(context, status)),
                 DebugPanel(log: controller.log),
               ],
@@ -64,7 +66,16 @@ class HomePage extends StatelessWidget {
         );
       case ConnectionPhase.connecting:
       case ConnectionPhase.pairing:
-        return const Center(child: CircularProgressIndicator());
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(_phaseText(status.phase), textAlign: TextAlign.center),
+            ],
+          ),
+        );
       case ConnectionPhase.idle:
       case ConnectionPhase.scanning:
         return _ScanView(controller: controller, scanning: status.phase == ConnectionPhase.scanning);
@@ -87,24 +98,66 @@ String _phaseText(ConnectionPhase phase) => switch (phase) {
   ConnectionPhase.error => 'Erro',
 };
 
-class _StatusBar extends StatelessWidget {
-  const _StatusBar({required this.status});
+/// Estado da conexão só como ícone; o texto fica no tooltip.
+class _ConnectionIcon extends StatelessWidget {
+  const _ConnectionIcon({required this.phase});
 
-  final ConnectionStatus status;
+  final ConnectionPhase phase;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final ok = status.phase == ConnectionPhase.connected;
-    return Container(
-      width: double.infinity,
-      color: ok ? scheme.primaryContainer : scheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      // Nos estados de problema o detalhe aparece no corpo da tela.
-      child: Text(switch (status.phase) {
-        ConnectionPhase.bluetoothOff || ConnectionPhase.permissionDenied || ConnectionPhase.error => 'Desconectado',
-        final phase => _phaseText(phase),
-      }),
+    final (icon, label, color) = switch (phase) {
+      ConnectionPhase.connected => (Icons.bluetooth_connected, 'Conectado', scheme.onSurfaceVariant),
+      ConnectionPhase.reconnecting => (Icons.bluetooth_searching, 'Reconectando…', scheme.error),
+      ConnectionPhase.scanning => (Icons.bluetooth_searching, 'Procurando…', scheme.onSurfaceVariant),
+      ConnectionPhase.connecting => (Icons.bluetooth_searching, 'Conectando…', scheme.onSurfaceVariant),
+      ConnectionPhase.pairing => (Icons.bluetooth_searching, 'Pareando…', scheme.onSurfaceVariant),
+      _ => (Icons.bluetooth_disabled, 'Desconectado', scheme.onSurfaceVariant),
+    };
+    return Tooltip(
+      message: label,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Icon(icon, size: 20, color: color, semanticLabel: label),
+      ),
+    );
+  }
+}
+
+class _Battery extends StatelessWidget {
+  const _Battery({required this.percent});
+
+  final int percent;
+
+  static const _bars = [
+    Icons.battery_0_bar,
+    Icons.battery_1_bar,
+    Icons.battery_2_bar,
+    Icons.battery_3_bar,
+    Icons.battery_4_bar,
+    Icons.battery_5_bar,
+    Icons.battery_6_bar,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final low = percent <= 15;
+    final color = low ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant;
+    final icon = low ? Icons.battery_alert : (percent >= 95 ? Icons.battery_full : _bars[(percent * 7 / 100).floor()]);
+    return Tooltip(
+      message: 'Bateria da balança',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: color),
+            Text('$percent%', style: theme.textTheme.bodySmall?.copyWith(color: color)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -118,7 +171,6 @@ class _LiveView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final weight = controller.lastWeight;
-    final battery = controller.batteryPercent;
     final secondary = Theme.of(context).textTheme.titleLarge
         ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
     // A tara manual mexe no zero de que o reconhecimento depende: só fora do fluxo.
@@ -137,14 +189,7 @@ class _LiveView extends StatelessWidget {
           ],
           EspressoPanel(espresso: espresso, live: controller.isLive),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
-              const SizedBox(width: 32),
-              Text(battery == null ? '--%' : '$battery%', style: secondary),
-            ],
-          ),
+          Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: canTare ? controller.tare : null,
