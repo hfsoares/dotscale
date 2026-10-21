@@ -5,6 +5,7 @@ class EspressoTuning {
     this.stableRange = 0.3,
     this.stableMinSamples = 5,
     this.emptyBelow = 1.0,
+    this.minObject = 5.0,
     this.matchTolerance = 1.5,
     this.groundsBelow = 3.0,
     this.groundsAbove = 1.0,
@@ -25,6 +26,9 @@ class EspressoTuning {
 
   /// Vazia: estável com |peso| < [emptyBelow].
   final double emptyBelow;
+
+  /// Só um peso estável ≥ [minObject] conta como objeto colocado; entre vazia e isso, nada muda.
+  final double minObject;
 
   /// Um peso estável bate com um recipiente se estiver a ± [matchTolerance].
   final double matchTolerance;
