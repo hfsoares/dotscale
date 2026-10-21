@@ -11,7 +11,9 @@ class StabilityTracker {
 
   void add(DateTime at, double grams) {
     _window.add((at: at, grams: grams));
-    while (at.difference(_window.first.at) > tuning.stableWindow) {
+    // Guarda uma leitura na borda (≥ janela atrás): os intervalos da Dot oscilam entre ~90 e
+    // ~115 ms, e sem ela a janela às vezes cobriria menos que o mínimo e o peso "piscaria".
+    while (_window.length >= 2 && at.difference(_window.elementAt(1).at) >= tuning.stableWindow) {
       _window.removeFirst();
     }
   }

@@ -54,4 +54,14 @@ void main() {
     tracker.reset();
     expect(tracker.stableGrams, isNull);
   });
+
+  test('intervalos irregulares da Dot real (93/94/112 ms) continuam estáveis', () {
+    var at = _t0;
+    const gaps = [93, 94, 112];
+    for (var i = 0; i < 100; i++) {
+      tracker.add(at, 142.8);
+      if (i >= 11) expect(tracker.stableGrams, 142.8, reason: 'leitura $i');
+      at = at.add(Duration(milliseconds: gaps[i % 3]));
+    }
+  });
 }
