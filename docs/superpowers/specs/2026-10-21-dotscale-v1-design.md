@@ -175,10 +175,19 @@ frames reais copiados do painel de debug.
 **A v1 está pronta quando** (minha decisão):
 
 - o app conecta na Dot pelo celular Android do usuário;
-- o peso na tela acompanha o display da balança (mesmo valor com 0,1 g,
-  conferido com um objeto de peso conhecido e com peso negativo após tarar
-  pelo botão da balança), sem atraso perceptível;
+- o peso na tela bate com outra balança (Timemore Basic 3) para o mesmo objeto,
+  sem atraso perceptível. A Dot não tem display nem botões, e zera sozinha ao
+  ligar; por isso, ao ligá-la com um objeto em cima e depois retirá-lo, o peso
+  fica negativo;
 - a reconexão funciona depois de desligar e religar a balança.
+
+**Resultado (2026-10-21):** todos os critérios foram atendidos num Galaxy S24
+(Android 16):
+
+- o peso confere com a Basic 3;
+- a bateria aparece;
+- a reconexão funciona, tanto ao desligar a balança quanto ao desligar o
+  Bluetooth.
 
 Se o protocolo real divergir do documentado, corrigir o parser faz parte da v1.
 
