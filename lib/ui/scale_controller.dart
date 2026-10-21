@@ -42,16 +42,28 @@ class ScaleController extends ChangeNotifier {
   List<FoundScale> _found = const [];
   final List<FrameLogEntry> _log = [];
   bool _stale = false;
+  String? _tareError;
   Timer? _staleTimer;
 
   ConnectionStatus get status => _status;
   WeightReading? get lastWeight => _lastWeight;
   int? get batteryPercent => _batteryPercent;
+  String? get tareError => _tareError;
   List<FoundScale> get found => _found;
   List<FrameLogEntry> get log => List.unmodifiable(_log);
   /// Conectado e recebendo peso: o link BLE pode levar vários segundos para
   /// acusar a queda, então um peso parado também deixa de contar como ao vivo.
   bool get isLive => _status.phase == ConnectionPhase.connected && !_stale;
+
+  Future<void> tare() async {
+    try {
+      await connection.tare();
+      _tareError = null;
+    } catch (_) {
+      _tareError = 'Não foi possível tarar. Tente de novo.';
+    }
+    notifyListeners();
+  }
 
   void _updateLive(void Function() change) {
     final wasLive = isLive;

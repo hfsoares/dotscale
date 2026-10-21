@@ -257,6 +257,14 @@ class FbpDotConnection implements ScaleConnection {
   }
 
   @override
+  Future<void> tare() async {
+    if (_command == null || _status.phase != ConnectionPhase.connected) {
+      throw StateError('Balança não conectada');
+    }
+    await _send(DotCommands.tare());
+  }
+
+  @override
   Future<void> disconnect() async {
     _userDisconnected = true;
     await _teardown(disconnectDevice: true);

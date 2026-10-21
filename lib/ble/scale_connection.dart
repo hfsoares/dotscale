@@ -58,5 +58,8 @@ abstract class ScaleConnection {
   /// Reconecta à última balança conhecida; sem nenhuma, procura balanças.
   Future<void> reconnectLast();
 
+  /// Zera a balança (a Dot não tem botão). Lança exceção se não estiver conectada.
+  Future<void> tare();
+
   void dispose();
 }

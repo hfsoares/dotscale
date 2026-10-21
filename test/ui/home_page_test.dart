@@ -116,4 +116,37 @@ void main() {
     await tester.pump();
     expect(fake.calls, containsAllInOrder(['disconnect', 'startScan']));
   });
+
+  testWidgets('Tarar envia a tara quando ao vivo', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
+    fake.emitEvent(_w);
+    await tester.pump();
+    await tester.tap(find.text('Tarar'));
+    expect(fake.calls, contains('tare'));
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('Tarar fica desativado ao reconectar', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
+    fake.emitEvent(_w);
+    await tester.pump();
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.reconnecting));
+    await tester.pump();
+    await tester.tap(find.text('Tarar'));
+    expect(fake.calls, isNot(contains('tare')));
+  });
+
+  testWidgets('falha da tara aparece na tela', (tester) async {
+    await pump(tester);
+    fake.tareFailure = StateError('link caiu');
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
+    fake.emitEvent(_w);
+    await tester.pump();
+    await tester.tap(find.text('Tarar'));
+    await tester.pump();
+    expect(find.text('Não foi possível tarar. Tente de novo.'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 3));
+  });
 }

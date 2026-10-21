@@ -69,4 +69,13 @@ void main() {
     expect(changes, [true, false, true]);
     c.dispose();
   });
+
+  test('tara com falha expõe mensagem, e a próxima tara bem-sucedida limpa', () async {
+    fake.tareFailure = StateError('link caiu');
+    await controller.tare();
+    expect(controller.tareError, 'Não foi possível tarar. Tente de novo.');
+    fake.tareFailure = null;
+    await controller.tare();
+    expect(controller.tareError, isNull);
+  });
 }
