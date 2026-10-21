@@ -35,8 +35,7 @@ void main() {
     d.hold(cup + to, secs(5));
   }
 
-  void expectDuration(Duration? actual, num seconds) =>
-      expect(actual!.inMilliseconds / 1000, closeTo(seconds, 0.3));
+  void expectDuration(Duration? actual, num seconds) => expect(actual!.inMilliseconds / 1000, closeTo(seconds, 0.3));
 
   test('extração completa: tempo, bebida e ratio', () {
     shot();

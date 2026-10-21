@@ -12,4 +12,14 @@ void main() {
     expect(formatFlow(1.2), '1.2 g/s');
     expect(formatFlow(-0.01), '0.0 g/s');
   });
+
+  test('formatRatio', () {
+    expect(formatRatio(36, 18), '1:2.0');
+    expect(formatRatio(40.5, 18), '1:2.3');
+  });
+
+  test('formatSeconds', () {
+    expect(formatSeconds(const Duration(milliseconds: 27400)), '27.4 s');
+    expect(formatSeconds(Duration.zero), '0.0 s');
+  });
 }

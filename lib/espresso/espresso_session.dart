@@ -86,6 +86,7 @@ class EspressoSession {
   String? get cupName => _cupName;
   EspressoResult? get result => _result;
   bool get reconnectWarning => _reconnectWarning;
+
   /// Início do cronômetro: o toque em "Iniciar", senão as primeiras gotas.
   DateTime? get timerStartedAt => _timerStart ?? _extractionStart;
   DateTime? get extractionStartedAt => _extractionStart;

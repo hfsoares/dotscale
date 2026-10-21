@@ -24,6 +24,6 @@ class PrefsContainerStore implements ContainerStore {
   }
 
   @override
-  Future<void> save(List<ScaleContainer> containers) async => (await SharedPreferences.getInstance())
-      .setString(_key, jsonEncode([for (final c in containers) c.toJson()]));
+  Future<void> save(List<ScaleContainer> containers) async =>
+      (await SharedPreferences.getInstance()).setString(_key, jsonEncode([for (final c in containers) c.toJson()]));
 }

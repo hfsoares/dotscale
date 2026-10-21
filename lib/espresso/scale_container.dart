@@ -30,5 +30,7 @@ class ScaleContainer {
 }
 
 /// Recipientes a menos de [within] gramas de [grams]: podem ser confundidos com ele.
-List<ScaleContainer> containersNear(List<ScaleContainer> all, double grams, {double within = 3.0}) =>
-    [for (final c in all) if ((c.grams - grams).abs() < within) c];
+List<ScaleContainer> containersNear(List<ScaleContainer> all, double grams, {double within = 3.0}) => [
+  for (final c in all)
+    if ((c.grams - grams).abs() < within) c,
+];
