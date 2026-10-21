@@ -3,6 +3,8 @@ import 'package:dotscale/protocol/dot_event.dart';
 import 'package:dotscale/protocol/frame_decoder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fixtures/real_frames.dart';
+
 List<int> _be32(int v) => [(v >> 24) & 0xFF, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF];
 List<int> _be16(int v) => [(v >> 8) & 0xFF, v & 0xFF];
 
@@ -102,5 +104,31 @@ void main() {
     decoder.add(f.sublist(0, 5));
     decoder.reset();
     expect(decoder.add(f.sublist(5)), isEmpty);
+  });
+
+  group('frames reais da Dot', () {
+    test('peso zero, estável, negativo e subindo', () {
+      expect(weightOf(decoder.add(realWeightZero).single).grams, 0.0);
+      expect(weightOf(decoder.add(realWeightStable).single).grams, 26.2);
+      expect(weightOf(decoder.add(realWeightNegative).single).grams, -50.1);
+      final rising = weightOf(decoder.add(realWeightRising).single);
+      expect(rising.grams, 60.9);
+      expect(rising.flowGramsPerSecond, 60.9);
+    });
+
+    test('CRC 00 00 da Dot conta como ausente, não como divergente', () {
+      expect(decoder.add(realWeightStable).single.crcOk, isTrue);
+    });
+
+    test('resposta de bateria', () {
+      expect((decoder.add(realBatteryReply).single.event as BatteryReading).percent, 100);
+    });
+
+    test('ACK seguido de peso na mesma notificação', () {
+      final frames = decoder.add(realAckThenWeight);
+      expect(frames.map((f) => f.frameClass), [kClassCommand, kClassNotify]);
+      expect(frames.first.event, isNull);
+      expect(frames.last.event, isA<WeightReading>());
+    });
   });
 }

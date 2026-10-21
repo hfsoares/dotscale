@@ -71,8 +71,9 @@ class FrameDecoder {
       frameClass: frameClass,
       type: type,
       payload: payload,
-      // O CRC de entrada ainda não foi confirmado em hardware: só marca, não descarta.
-      crcOk: crc16Modbus(bytes.sublist(0, bodyLength)) == received,
+      // A Dot real envia o CRC sempre como 00 00 (confirmado em hardware): conta como ausente.
+      // Um CRC presente e divergente só é marcado, nunca descarta o frame.
+      crcOk: received == 0 || crc16Modbus(bytes.sublist(0, bodyLength)) == received,
       event: _event(frameClass, type, payload),
     );
   }

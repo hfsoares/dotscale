@@ -23,6 +23,7 @@ const _connectRetryDelay = Duration(milliseconds: 500);
 const _settleAfterSubscribe = Duration(milliseconds: 500);
 const _settleBetweenCommands = Duration(milliseconds: 200);
 const _maxReconnectDelay = Duration(seconds: 10);
+const _batteryPollInterval = Duration(seconds: 60);
 
 /// Conexão com a Timemore Dot via flutter_blue_plus.
 ///
@@ -45,6 +46,7 @@ class FbpDotConnection implements ScaleConnection {
   StreamSubscription<bool>? _isScanningSub;
   StreamSubscription<List<int>>? _notifySub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
+  Timer? _batteryTimer;
   bool _userDisconnected = true;
   bool _reconnecting = false;
 
@@ -196,6 +198,12 @@ class FbpDotConnection implements ScaleConnection {
     await _send(DotCommands.unitGrams());
     await Future<void>.delayed(_settleBetweenCommands);
     await _send(DotCommands.standardMode());
+    await Future<void>.delayed(_settleBetweenCommands);
+    await _send(DotCommands.queryBattery());
+    _batteryTimer?.cancel();
+    _batteryTimer = Timer.periodic(_batteryPollInterval, (_) {
+      if (_command != null) unawaited(_send(DotCommands.queryBattery()).catchError((_) {}));
+    });
 
     await _store.save(device.remoteId.str);
     _setStatus(ConnectionPhase.connected);
@@ -215,6 +223,7 @@ class FbpDotConnection implements ScaleConnection {
   }
 
   void _onLinkLost() {
+    _batteryTimer?.cancel();
     if (_userDisconnected || _reconnecting) return;
     if (_status.phase != ConnectionPhase.connected) return; // falha durante a conexão: tratada em connect()
     unawaited(_reconnectLoop());
@@ -262,6 +271,8 @@ class FbpDotConnection implements ScaleConnection {
   }
 
   Future<void> _teardown({bool disconnectDevice = false}) async {
+    _batteryTimer?.cancel();
+    _batteryTimer = null;
     await _connectionSub?.cancel();
     _connectionSub = null;
     await _notifySub?.cancel();

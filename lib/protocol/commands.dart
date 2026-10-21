@@ -38,4 +38,7 @@ abstract final class DotCommands {
   static Uint8List tare() => buildFrame(kClassCommand, kTypeTare);
   static Uint8List unitGrams() => buildFrame(kClassCommand, kTypeUnit, const [0x00]);
   static Uint8List standardMode() => buildFrame(kClassCommand, kTypeMode, const [0x01, 0x00]);
+
+  /// A Dot não envia a bateria sozinha: responde a esta consulta com um relatório 02 05.
+  static Uint8List queryBattery() => buildFrame(kClassQuery, kTypeBattery);
 }

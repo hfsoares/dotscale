@@ -21,4 +21,11 @@ void main() {
     final crc = crc16Modbus(f.sublist(0, 8));
     expect(f.sublist(8), [crc >> 8, crc & 0xFF]);
   });
+
+  test('queryBattery é uma consulta 02 05 sem payload', () {
+    final f = DotCommands.queryBattery();
+    expect(f.sublist(0, 6), [0xA5, 0x5A, 0x02, 0x05, 0x00, 0x00]);
+    final crc = crc16Modbus(f.sublist(0, 6));
+    expect(f.sublist(6), [crc >> 8, crc & 0xFF]);
+  });
 }

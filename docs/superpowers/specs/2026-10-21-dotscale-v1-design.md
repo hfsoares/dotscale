@@ -143,6 +143,17 @@ rejeitar o frame. A v1 faz o mesmo e mostra a divergência no painel de debug.
 - o layout real do payload de peso;
 - se o pareamento é pedido.
 
+**Confirmado na Dot real (2026-10-21, Galaxy S24 / Android 16):**
+
+- O link funciona com bond no Android; conexão e reconexão ok.
+- O CRC dos frames que a Dot envia é sempre `00 00`. O app trata isso como "CRC ausente".
+- Peso: `payload[0..3]` int32 em 0,1 g, inclusive negativo. Frames a cada ~100 ms.
+- `payload[4..5]` é o fluxo em 0,1 g/s. Nunca é negativo e satura em 99,9.
+- Timer e flag de sobrecarga vieram sempre zerados em modo padrão.
+- Os comandos recebem ACK `03 <tipo> 00 01 01` (sucesso), com CRC `00 00`.
+- **A bateria não é enviada sozinha.** É preciso consultar com `02 05`; a resposta é
+  `02 05 [barras, %]`. O app consulta ao conectar e a cada 60 s.
+
 **Comandos conhecidos, para versões futuras:**
 
 | Comando | Bytes |
