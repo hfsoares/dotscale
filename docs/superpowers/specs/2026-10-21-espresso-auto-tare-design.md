@@ -227,3 +227,13 @@ Cenários da máquina de estados com sequências de leituras sintéticas:
 - Layout e navegação para a tela de recipientes.
 - Ajustar os limiares acima se os testes no hardware mostrarem necessidade
   (registrar a mudança no documento).
+
+## Ajustes feitos na implementação (2026-10-21)
+
+- **Objeto mínimo de 5 g:** entre "vazia" (< 1 g) e 5 g o peso não rearma nem é reconhecido, para ruído não virar xícara.
+- **Gotas:** a janela de 1 s começa quando o líquido passa de 1,0 g (e não termina nele), senão um pico de vibração
+  dispararia antes de voltar. O início registrado é a primeira leitura que se descola da linha de base (mediana do
+  peso antes), olhando no máximo 2 s para trás; gotas soltas da pré-infusão não puxam o início.
+- **Tranco:** variação > 3 g entre duas leituras (~100 ms) na extração é a balança sendo levantada ou a xícara
+  retirada: encerra no último ponto plausível. A bebida é a mediana do patamar final, não o máximo.
+- **Desconexão na extração:** o resultado sai marcado como interrompido, com aviso no card.
