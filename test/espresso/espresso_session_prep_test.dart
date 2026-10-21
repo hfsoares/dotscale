@@ -78,6 +78,27 @@ void main() {
     expect(session.netGrams, 0.0);
   });
 
+  test('número grande mostra a dose sem o copinho', () {
+    weighBeans();
+    expect(session.displayGrams, 0.0);
+    d.hold(40, s);
+    expect(session.displayGrams, closeTo(0.0, 1e-9));
+    d.ramp(40, 57.8, const Duration(seconds: 2));
+    d.hold(57.8, s);
+    expect(session.step, EspressoStep.awaitingCup);
+    expect(session.displayGrams, closeTo(17.8, 1e-9));
+    d.hold(0, s);
+    expect(session.displayGrams, 0.0);
+  });
+
+  test('sem copinho, o número grande é o líquido', () {
+    weighBeans();
+    session.useBeansAsDose();
+    d.hold(120, s);
+    expect(session.step, EspressoStep.cupReady);
+    expect(session.displayGrams, 0.0);
+  });
+
   test('usar peso dos grãos', () {
     weighBeans();
     session.useBeansAsDose();

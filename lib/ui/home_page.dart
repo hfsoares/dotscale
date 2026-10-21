@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../ble/scale_connection.dart';
 import '../espresso/espresso_session.dart';
 import 'containers_page.dart';
-import 'debug_panel.dart';
 import 'espresso_controller.dart';
 import 'espresso_panel.dart';
 import 'format.dart';
 import 'scale_controller.dart';
+import 'settings_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key, required this.controller, required this.espresso});
@@ -25,7 +25,7 @@ class HomePage extends StatelessWidget {
           appBar: AppBar(
             title: Text(status.deviceName?.isNotEmpty == true ? status.deviceName! : 'DotScale'),
             actions: [
-              _ConnectionIcon(phase: status.phase),
+              _ConnectionIcon(phase: status.phase, onDisconnect: controller.connection.disconnect),
               if (status.phase == ConnectionPhase.connected && controller.batteryPercent != null)
                 _Battery(percent: controller.batteryPercent!),
               IconButton(
@@ -33,15 +33,17 @@ class HomePage extends StatelessWidget {
                 icon: const Icon(Icons.coffee),
                 onPressed: () => _openContainers(context, espresso),
               ),
+              IconButton(
+                tooltip: 'Configurações',
+                icon: const Icon(Icons.settings),
+                onPressed: () =>
+                    Navigator.of(context)
+                        .push(MaterialPageRoute<void>(builder: (_) => SettingsPage(controller: controller))),
+              ),
             ],
           ),
           body: SafeArea(
-            child: Column(
-              children: [
-                Expanded(child: _body(context, status)),
-                DebugPanel(log: controller.log),
-              ],
-            ),
+            child: Column(children: [Expanded(child: _body(context, status))]),
           ),
         );
       },
@@ -98,11 +100,12 @@ String _phaseText(ConnectionPhase phase) => switch (phase) {
   ConnectionPhase.error => 'Erro',
 };
 
-/// Estado da conexão só como ícone; o texto fica no tooltip.
+/// Estado da conexão só como ícone; o texto fica no tooltip. Conectado, o toque abre o Desconectar.
 class _ConnectionIcon extends StatelessWidget {
-  const _ConnectionIcon({required this.phase});
+  const _ConnectionIcon({required this.phase, required this.onDisconnect});
 
   final ConnectionPhase phase;
+  final VoidCallback onDisconnect;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +118,13 @@ class _ConnectionIcon extends StatelessWidget {
       ConnectionPhase.pairing => (Icons.bluetooth_searching, 'Pareando…', scheme.onSurfaceVariant),
       _ => (Icons.bluetooth_disabled, 'Desconectado', scheme.onSurfaceVariant),
     };
+    if (phase == ConnectionPhase.connected || phase == ConnectionPhase.reconnecting) {
+      return PopupMenuButton<void>(
+        tooltip: label,
+        icon: Icon(icon, size: 20, color: color),
+        itemBuilder: (_) => [PopupMenuItem(onTap: onDisconnect, child: const Text('Desconectar'))],
+      );
+    }
     return Tooltip(
       message: label,
       child: Padding(
@@ -173,8 +183,8 @@ class _LiveView extends StatelessWidget {
     final weight = controller.lastWeight;
     final secondary = Theme.of(context).textTheme.titleLarge
         ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
-    // A tara manual mexe no zero de que o reconhecimento depende: só fora do fluxo.
-    final canTare = controller.isLive && espresso.session.step == EspressoStep.idle;
+    // A tara manual mexe no zero de que o reconhecimento depende: só antes do dosímetro.
+    final showTare = espresso.session.step == EspressoStep.idle;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
@@ -190,23 +200,23 @@ class _LiveView extends StatelessWidget {
           EspressoPanel(espresso: espresso, live: controller.isLive),
           const SizedBox(height: 8),
           Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: canTare ? controller.tare : null,
-            icon: const Icon(Icons.exposure_zero),
-            label: const Text('Tarar'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(220, 72),
-              textStyle: Theme.of(context).textTheme.headlineSmall,
+          if (showTare) ...[
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: controller.isLive ? controller.tare : null,
+              icon: const Icon(Icons.exposure_zero),
+              label: const Text('Tarar'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(220, 72),
+                textStyle: Theme.of(context).textTheme.headlineSmall,
+              ),
             ),
-          ),
-          if (controller.tareError != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ),
-          const SizedBox(height: 16),
-          TextButton(onPressed: controller.connection.disconnect, child: const Text('Desconectar')),
+            if (controller.tareError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ),
+          ],
         ],
       ),
     );

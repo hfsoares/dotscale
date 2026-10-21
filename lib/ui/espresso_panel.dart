@@ -51,13 +51,15 @@ class _EspressoPanelState extends State<EspressoPanel> {
     final theme = Theme.of(context);
     final secondary = theme.textTheme.titleLarge?.copyWith(fontFeatures: _tabular);
     final net = session.netGrams;
+    final shown = session.displayGrams;
+    final instruction = _instruction(step);
     final dose = session.dose;
     final withCup = {EspressoStep.cupReady, EspressoStep.preInfusion, EspressoStep.extracting}.contains(step);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(_instruction(step), style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
+        if (instruction != null) Text(instruction, style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
         if (session.reconnectWarning)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -71,13 +73,11 @@ class _EspressoPanelState extends State<EspressoPanel> {
           opacity: widget.live ? 1 : 0.35,
           child: FittedBox(
             child: Text(
-              net == null ? '--' : formatGrams(net),
+              shown == null ? '--' : formatGrams(shown),
               style: const TextStyle(fontSize: 88, fontWeight: FontWeight.w600, fontFeatures: _tabular),
             ),
           ),
         ),
-        if (step != EspressoStep.idle && session.rawGrams != null)
-          Text('Balança ${formatGrams(session.rawGrams!)}', style: theme.textTheme.bodySmall),
         ..._details(session, step),
         if (withCup && dose != null && net != null)
           Padding(
@@ -127,8 +127,8 @@ class _EspressoPanelState extends State<EspressoPanel> {
   }
 }
 
-String _instruction(EspressoStep step) => switch (step) {
-  EspressoStep.idle => 'Coloque o dosímetro',
+String? _instruction(EspressoStep step) => switch (step) {
+  EspressoStep.idle => null,
   EspressoStep.weighingBeans => 'Grãos',
   EspressoStep.awaitingGrounds => 'Coloque o copinho com o pó',
   EspressoStep.awaitingCup => 'Coloque a xícara na Gaggia',

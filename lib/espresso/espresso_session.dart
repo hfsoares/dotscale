@@ -81,6 +81,21 @@ class EspressoSession {
   double? get rawGrams => _raw;
   double? get netGrams => _raw == null ? null : _raw! - _offset;
   double? get stableGrams => _stability.stableGrams;
+
+  /// O número grande: no passo do pó, o peso sem o copinho (a dose); nos outros, o líquido.
+  double? get displayGrams {
+    final net = netGrams;
+    final beans = _beans;
+    final fromGrinderCup =
+        _step == EspressoStep.awaitingGrounds || (_step == EspressoStep.awaitingCup && _retention != null);
+    if (net == null || beans == null || !fromGrinderCup) return net;
+    for (final cup in containers.where((c) => c.kind == ContainerKind.grinderCup)) {
+      final dose = _raw! - cup.grams;
+      if (dose >= -tuning.matchTolerance && dose <= beans + tuning.groundsAbove + tuning.minObject) return dose;
+    }
+    return net;
+  }
+
   double? get beans => _beans;
   double? get dose => _dose;
 

@@ -80,30 +80,33 @@ void main() {
     expect(find.text('Cadastrar recipiente'), findsOneWidget);
   });
 
-  testWidgets('idle mostra Coloque o dosímetro e Tarar habilitado', (tester) async {
+  testWidgets('idle não tem instrução e mostra Tarar habilitado', (tester) async {
     await pump(tester);
     await hold(tester, 0);
-    expect(find.text('Coloque o dosímetro'), findsOneWidget);
+    expect(find.text('Coloque o dosímetro'), findsNothing);
     expect(button(tester, 'Tarar').onPressed, isNotNull);
     await finish(tester);
   });
 
-  testWidgets('fluxo até a xícara mostra Iniciar e Tarar desabilitado', (tester) async {
+  testWidgets('fluxo até a xícara mostra Iniciar e esconde Tarar', (tester) async {
     await pump(tester);
     await hold(tester, 0);
     await hold(tester, 80);
     expect(find.text('Grãos'), findsOneWidget);
+    expect(find.text('Tarar'), findsNothing);
     await hold(tester, 98);
     await hold(tester, 0);
     expect(find.text('Coloque o copinho com o pó'), findsOneWidget);
     await hold(tester, 57.8);
     expect(find.text('Coloque a xícara na Gaggia'), findsOneWidget);
     expect(find.text('Dose 17.8 g · retenção 0.2 g'), findsOneWidget);
+    expect(find.text('17.8 g'), findsOneWidget); // número grande: a dose, não 57.8 g
+    expect(find.textContaining('Balança'), findsNothing);
     await hold(tester, 0);
     await hold(tester, 120);
     expect(find.text('Pronto — inicie a extração'), findsOneWidget);
     expect(button(tester, 'Iniciar').onPressed, isNotNull);
-    expect(button(tester, 'Tarar').onPressed, isNull);
+    expect(find.text('Tarar'), findsNothing);
     await finish(tester);
   });
 
@@ -128,7 +131,7 @@ void main() {
     expect(find.text('17.8 g'), findsOneWidget);
     expect(find.text('35.6 g'), findsOneWidget);
     expect(find.textContaining('Extração'), findsOneWidget);
-    expect(find.text('Coloque o dosímetro'), findsOneWidget);
+    expect(find.text('Tarar'), findsOneWidget);
     await finish(tester);
   });
 
@@ -144,12 +147,13 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('Cancelar volta para Coloque o dosímetro', (tester) async {
+  testWidgets('Cancelar volta para o início, com Tarar', (tester) async {
     await pump(tester);
     await toCup(tester);
     await tester.tap(find.text('Cancelar'));
     await tester.pump();
-    expect(find.text('Coloque o dosímetro'), findsOneWidget);
+    expect(find.text('Tarar'), findsOneWidget);
+    expect(find.text('Pronto — inicie a extração'), findsNothing);
     await finish(tester);
   });
 

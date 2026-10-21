@@ -89,11 +89,13 @@ void main() {
     expect(find.byTooltip('Pareando…'), findsOneWidget);
   });
 
-  testWidgets('conectado mostra Desconectar', (tester) async {
+  testWidgets('Desconectar fica no menu do ícone de conexão', (tester) async {
     await pump(tester);
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
     await tester.pump();
-    await tester.ensureVisible(find.text('Desconectar'));
+    expect(find.text('Desconectar'), findsNothing);
+    await tester.tap(find.byTooltip('Conectado'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Desconectar'));
     expect(fake.calls, contains('disconnect'));
   });
@@ -138,12 +140,15 @@ void main() {
     expect(fake.calls, contains('reconnectLast'));
   });
 
-  testWidgets('painel de debug mostra frames em hex e CRC divergente', (tester) async {
+  testWidgets('debug fica nas configurações e mostra frames em hex e CRC divergente', (tester) async {
     await pump(tester);
     final frame = buildFrame(kClassNotify, kTypeWeight, [0, 0, 0, 184, 0, 0, 0, 0, 0]);
     fake.emitFrame(FrameLogEntry(at: DateTime(2026), outgoing: false, bytes: frame, crcOk: false));
     fake.emitFrame(FrameLogEntry(at: DateTime(2026), outgoing: true, bytes: Uint8List.fromList([0xA5, 0x5A, 0x03])));
     await tester.pump();
+    expect(find.text('Debug'), findsNothing);
+    await tester.tap(find.byTooltip('Configurações'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Debug'));
     await tester.pumpAndSettle();
     expect(find.textContaining('A5 5A 01 01'), findsOneWidget);
