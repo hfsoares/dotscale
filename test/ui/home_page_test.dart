@@ -3,12 +3,14 @@ import 'dart:typed_data';
 import 'package:dotscale/ble/scale_connection.dart';
 import 'package:dotscale/protocol/commands.dart';
 import 'package:dotscale/protocol/dot_event.dart';
+import 'package:dotscale/ui/espresso_controller.dart';
 import 'package:dotscale/ui/home_page.dart';
 import 'package:dotscale/ui/scale_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fake_scale_connection.dart';
+import '../fakes/in_memory_container_store.dart';
 
 const _w = WeightReading(grams: 18.4, flowGramsPerSecond: 1.2, timerSeconds: 0, overload: false);
 
@@ -20,7 +22,13 @@ void main() {
     fake = FakeScaleConnection();
     controller = ScaleController(fake);
     addTearDown(controller.dispose);
-    await tester.pumpWidget(MaterialApp(home: HomePage(controller: controller)));
+    final espresso = EspressoController(fake, InMemoryContainerStore());
+    addTearDown(espresso.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomePage(controller: controller, espresso: espresso),
+      ),
+    );
   }
 
   testWidgets('idle mostra Procurar balança e inicia o scan', (tester) async {
@@ -54,6 +62,7 @@ void main() {
     await pump(tester);
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
     await tester.pump();
+    await tester.ensureVisible(find.text('Desconectar'));
     await tester.tap(find.text('Desconectar'));
     expect(fake.calls, contains('disconnect'));
   });
@@ -83,7 +92,9 @@ void main() {
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.reconnecting));
     await tester.pump();
     expect(find.text('Reconectando…'), findsOneWidget);
-    final opacity = tester.widget<Opacity>(find.ancestor(of: find.text('18.4 g'), matching: find.byType(Opacity)).first);
+    final opacity = tester.widget<Opacity>(
+      find.ancestor(of: find.text('18.4 g'), matching: find.byType(Opacity)).first,
+    );
     expect(opacity.opacity, lessThan(1));
   });
 

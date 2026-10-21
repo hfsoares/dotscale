@@ -1,23 +1,37 @@
 import 'package:flutter/material.dart';
 
 import '../ble/scale_connection.dart';
+import '../espresso/espresso_session.dart';
+import 'containers_page.dart';
 import 'debug_panel.dart';
+import 'espresso_controller.dart';
+import 'espresso_panel.dart';
 import 'format.dart';
 import 'scale_controller.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key, required this.controller});
+  const HomePage({super.key, required this.controller, required this.espresso});
 
   final ScaleController controller;
+  final EspressoController espresso;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
+      listenable: Listenable.merge([controller, espresso]),
       builder: (context, _) {
         final status = controller.status;
         return Scaffold(
-          appBar: AppBar(title: Text(status.deviceName?.isNotEmpty == true ? status.deviceName! : 'DotScale')),
+          appBar: AppBar(
+            title: Text(status.deviceName?.isNotEmpty == true ? status.deviceName! : 'DotScale'),
+            actions: [
+              IconButton(
+                tooltip: 'Recipientes',
+                icon: const Icon(Icons.coffee),
+                onPressed: () => _openContainers(context, espresso),
+              ),
+            ],
+          ),
           body: SafeArea(
             child: Column(
               children: [
@@ -36,7 +50,7 @@ class HomePage extends StatelessWidget {
     switch (status.phase) {
       case ConnectionPhase.connected:
       case ConnectionPhase.reconnecting:
-        return _LiveView(controller: controller);
+        return _LiveView(controller: controller, espresso: espresso);
       case ConnectionPhase.bluetoothOff:
       case ConnectionPhase.permissionDenied:
       case ConnectionPhase.error:
@@ -57,6 +71,9 @@ class HomePage extends StatelessWidget {
     }
   }
 }
+
+void _openContainers(BuildContext context, EspressoController espresso) =>
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ContainersPage(controller: espresso)));
 
 String _phaseText(ConnectionPhase phase) => switch (phase) {
   ConnectionPhase.idle => 'Desconectado',
@@ -93,59 +110,60 @@ class _StatusBar extends StatelessWidget {
 }
 
 class _LiveView extends StatelessWidget {
-  const _LiveView({required this.controller});
+  const _LiveView({required this.controller, required this.espresso});
 
   final ScaleController controller;
+  final EspressoController espresso;
 
   @override
   Widget build(BuildContext context) {
     final weight = controller.lastWeight;
     final battery = controller.batteryPercent;
-    const tabular = [FontFeature.tabularFigures()];
-    final secondary = Theme.of(context).textTheme.titleLarge?.copyWith(fontFeatures: tabular);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Opacity(
-          opacity: controller.isLive ? 1 : 0.35,
-          child: Column(
+    final secondary = Theme.of(context).textTheme.titleLarge
+        ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    // A tara manual mexe no zero de que o reconhecimento depende: só fora do fluxo.
+    final canTare = controller.isLive && espresso.session.step == EspressoStep.idle;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Column(
+        children: [
+          if (!espresso.hasRequiredContainers) ...[
+            const Text(
+              'Cadastre o dosímetro e o copinho do moedor para o espresso automático.',
+              textAlign: TextAlign.center,
+            ),
+            OutlinedButton(onPressed: () => _openContainers(context, espresso), child: const Text('Recipientes')),
+            const SizedBox(height: 16),
+          ],
+          EspressoPanel(espresso: espresso, live: controller.isLive),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              FittedBox(
-                child: Text(
-                  weight == null ? '--' : formatGrams(weight.grams),
-                  style: const TextStyle(fontSize: 88, fontWeight: FontWeight.w600, fontFeatures: tabular),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
-                  const SizedBox(width: 32),
-                  Text(battery == null ? '--%' : '$battery%', style: secondary),
-                ],
-              ),
+              Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
+              const SizedBox(width: 32),
+              Text(battery == null ? '--%' : '$battery%', style: secondary),
             ],
           ),
-        ),
-        const SizedBox(height: 32),
-        FilledButton.icon(
-          onPressed: controller.isLive ? controller.tare : null,
-          icon: const Icon(Icons.exposure_zero),
-          label: const Text('Tarar'),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(220, 72),
-            textStyle: Theme.of(context).textTheme.headlineSmall,
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: canTare ? controller.tare : null,
+            icon: const Icon(Icons.exposure_zero),
+            label: const Text('Tarar'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(220, 72),
+              textStyle: Theme.of(context).textTheme.headlineSmall,
+            ),
           ),
-        ),
-        if (controller.tareError != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-          ),
-        const SizedBox(height: 24),
-        TextButton(onPressed: controller.connection.disconnect, child: const Text('Desconectar')),
-      ],
+          if (controller.tareError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(controller.tareError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+          const SizedBox(height: 16),
+          TextButton(onPressed: controller.connection.disconnect, child: const Text('Desconectar')),
+        ],
+      ),
     );
   }
 }
