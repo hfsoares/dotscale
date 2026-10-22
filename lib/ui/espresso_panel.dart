@@ -75,7 +75,7 @@ class _EspressoPanelState extends State<EspressoPanel> {
             opacity: widget.live ? 1 : 0.35,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
+              child: Column(
                 children: [
                   _Metric('Bebida', net == null ? '--' : formatGrams(net < 0 ? 0 : net)),
                   _Metric('Ratio', net == null || dose == null ? '--' : formatRatio(net < 0 ? 0 : net, dose)),
@@ -141,7 +141,8 @@ String? _instruction(EspressoStep step) => switch (step) {
   EspressoStep.extracting => 'Extraindo',
 };
 
-/// Um dos três números da extração: rótulo pequeno em cima, valor grande com a unidade menor.
+/// Um dos três números da extração, numa linha: rótulo pequeno à esquerda, valor grande com a
+/// unidade menor.
 class _Metric extends StatelessWidget {
   const _Metric(this.label, this.text);
 
@@ -154,24 +155,32 @@ class _Metric extends StatelessWidget {
     final split = text.lastIndexOf(' ');
     final value = split < 0 ? text : text.substring(0, split);
     final unit = split < 0 ? '' : text.substring(split);
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        child: Column(
-          children: [
-            Text(label, style: theme.textTheme.titleMedium),
-            FittedBox(
-              child: Text.rich(
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w600, fontFeatures: _tabular),
-                  children: [TextSpan(text: unit, style: const TextStyle(fontSize: 17))],
-                ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            maxLines: 1,
+            softWrap: false,
+            style: theme.textTheme.labelMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ),
+        Expanded(
+          child: FittedBox(
+            alignment: Alignment.centerRight,
+            child: Text.rich(
+              TextSpan(
+                text: value,
+                style: const TextStyle(fontSize: 72, fontWeight: FontWeight.w600, fontFeatures: _tabular),
+                children: [TextSpan(text: unit, style: const TextStyle(fontSize: 32))],
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

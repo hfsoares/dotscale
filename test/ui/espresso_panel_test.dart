@@ -129,7 +129,7 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('na largura do celular, os três números não se encostam', (tester) async {
+  testWidgets('na largura do celular, os três números ficam empilhados e grandes', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -143,13 +143,21 @@ void main() {
       tester.getRect(find.textContaining(RegExp(r'^\d+\.\d s$'))),
     ];
     for (var i = 1; i < rects.length; i++) {
-      expect(rects[i].left - rects[i - 1].right, greaterThanOrEqualTo(12), reason: '$rects');
+      expect(rects[i].top, greaterThanOrEqualTo(rects[i - 1].bottom), reason: '$rects');
     }
-    expect((rects[0].height - rects[2].height).abs(), lessThan(1));
+    for (final r in rects) {
+      expect(r.height, greaterThanOrEqualTo(64), reason: '$rects');
+    }
+    for (final label in ['Bebida', 'Ratio', 'Tempo']) {
+      expect(tester.getSize(find.text(label)).height, lessThan(20));
+    }
     await finish(tester);
   });
 
   testWidgets('pré-infusão conta o próprio tempo e Infusão inicia a extração', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
     await pump(tester);
     await toCup(tester);
     await tester.tap(find.text('Pré-infusão'));
