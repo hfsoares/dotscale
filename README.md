@@ -1,9 +1,19 @@
 # DotScale
 
-App Flutter que conecta na balança Timemore Dot por Bluetooth LE e mostra o peso ao vivo.
+App Flutter que conecta na balança Timemore Dot por Bluetooth LE, mostra o peso ao vivo e conduz o espresso
+reconhecendo os recipientes pelo peso.
 
-- Design: `docs/superpowers/specs/2026-10-21-dotscale-v1-design.md`
-- Plano: `docs/superpowers/plans/2026-10-21-dotscale-v1.md`
+- Design: `docs/superpowers/specs/2026-10-21-dotscale-v1-design.md`, `docs/superpowers/specs/2026-10-21-espresso-auto-tare-design.md`
+- Planos: `docs/superpowers/plans/`
+
+## Espresso
+
+1. Em **Recipientes** (ícone de xícara no topo), cadastre o dosímetro e o copinho do moedor: coloque cada um
+   vazio na balança, espere o peso parar e toque em "Cadastrar recipiente". Xícaras são opcionais.
+2. Coloque o dosímetro: o app desconta o peso dele e mostra os grãos. Tire-o para registrar.
+3. Coloque o copinho com o pó: o app registra a dose e a retenção.
+4. Leve a balança para a Gaggia com a xícara: ela é tarada sozinha. O cronômetro começa nas primeiras gotas
+   (ou toque em "Iniciar" para contar a pré-infusão) e para quando o peso para de subir.
 
 ## Ambiente
 

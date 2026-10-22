@@ -153,6 +153,9 @@ rejeitar o frame. A v1 faz o mesmo e mostra a divergência no painel de debug.
 - Os comandos recebem ACK `03 <tipo> 00 01 01` (sucesso), com CRC `00 00`.
 - **A bateria não é enviada sozinha.** É preciso consultar com `02 05`; a resposta é
   `02 05 [barras, %]`. O app consulta ao conectar e a cada 60 s.
+- Conectada ao app, a Dot parada e vazia não desligou em 3 min (teste de
+  2026-10-21). Sem conexão, ela desliga após ~1 min (README do
+  `Sofronio/dot-scale-mate`, não testado aqui).
 
 **Comandos conhecidos, para versões futuras:**
 
