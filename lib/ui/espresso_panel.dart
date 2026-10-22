@@ -136,7 +136,7 @@ String? _instruction(EspressoStep step) => switch (step) {
   EspressoStep.weighingBeans => 'Grãos',
   EspressoStep.awaitingGrounds => 'Coloque o copinho com o pó',
   EspressoStep.awaitingCup => 'Coloque a xícara na Gaggia',
-  EspressoStep.cupReady => 'Pronto — inicie a pré-infusão',
+  EspressoStep.cupReady => 'Xícara pronta',
   EspressoStep.preInfusion => 'Pré-infusão',
   EspressoStep.extracting => 'Extraindo',
 };
@@ -155,19 +155,22 @@ class _Metric extends StatelessWidget {
     final value = split < 0 ? text : text.substring(0, split);
     final unit = split < 0 ? '' : text.substring(split);
     return Expanded(
-      child: Column(
-        children: [
-          Text(label, style: theme.textTheme.titleMedium),
-          FittedBox(
-            child: Text.rich(
-              TextSpan(
-                text: value,
-                style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w600, fontFeatures: _tabular),
-                children: [TextSpan(text: unit, style: const TextStyle(fontSize: 22))],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          children: [
+            Text(label, style: theme.textTheme.titleMedium),
+            FittedBox(
+              child: Text.rich(
+                TextSpan(
+                  text: value,
+                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w600, fontFeatures: _tabular),
+                  children: [TextSpan(text: unit, style: const TextStyle(fontSize: 17))],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

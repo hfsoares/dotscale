@@ -105,7 +105,7 @@ void main() {
     expect(find.textContaining('Balança'), findsNothing);
     await hold(tester, 0);
     await hold(tester, 120);
-    expect(find.text('Pronto — inicie a pré-infusão'), findsOneWidget);
+    expect(find.text('Xícara pronta'), findsOneWidget);
     expect(button(tester, 'Pré-infusão').onPressed, isNotNull);
     expect(find.text('Iniciar'), findsNothing);
     expect(tester.getSize(find.widgetWithText(FilledButton, 'Pré-infusão')).height, greaterThanOrEqualTo(88));
@@ -126,6 +126,26 @@ void main() {
     final heights = [for (final v in values) tester.getSize(v).height];
     expect(heights.every((h) => (h - heights.first).abs() < 1), isTrue, reason: '$heights');
     expect(find.text('138.0 g'), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('na largura do celular, os três números não se encostam', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await pump(tester);
+    await toCup(tester);
+    await hold(tester, 120, readings: 10);
+    await ramp(tester, 120, 156, 290);
+    final rects = [
+      tester.getRect(find.text('36.0 g')),
+      tester.getRect(find.text('1:2.0')),
+      tester.getRect(find.textContaining(RegExp(r'^\d+\.\d s$'))),
+    ];
+    for (var i = 1; i < rects.length; i++) {
+      expect(rects[i].left - rects[i - 1].right, greaterThanOrEqualTo(12), reason: '$rects');
+    }
+    expect((rects[0].height - rects[2].height).abs(), lessThan(1));
     await finish(tester);
   });
 
@@ -186,7 +206,7 @@ void main() {
     await tester.tap(find.text('Cancelar'));
     await tester.pump();
     expect(find.text('Tarar'), findsOneWidget);
-    expect(find.text('Pronto — inicie a pré-infusão'), findsNothing);
+    expect(find.text('Xícara pronta'), findsNothing);
     final screen = tester.getSize(find.byType(Scaffold)).width;
     expect(tester.getCenter(find.text('Tarar')).dx, closeTo(screen / 2, 30));
     await finish(tester);
