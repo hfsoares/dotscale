@@ -79,6 +79,16 @@ class EspressoController extends ChangeNotifier {
   void startExtraction() => _act(() => session.startExtraction(now()));
   void useBeansAsDose() => _act(session.useBeansAsDose);
   void dismissResult() => _act(session.dismissResult);
+  void goBack() => _act(session.goBack);
+
+  /// Cadastra a xícara desconhecida do resumo com a tara dela e põe o nome no resumo.
+  Future<void> registerResultCup(String name) async {
+    final grams = session.result?.cupGrams;
+    if (grams == null) return;
+    await addContainer(name, ContainerKind.cup, grams: grams);
+    _act(() => session.nameResultCup(name));
+  }
+
   void cancel() => _act(session.cancel);
 
   /// Tempo da fase em curso: a pré-infusão desde o "Pré-infusão", a extração desde o seu início.

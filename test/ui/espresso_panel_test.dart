@@ -219,6 +219,37 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('Voltar aparece com a balança zerada e volta uma fase', (tester) async {
+    await pump(tester);
+    await toCup(tester);
+    expect(find.text('Voltar'), findsNothing); // xícara na balança
+    await hold(tester, 0);
+    expect(find.text('Xícara pronta'), findsOneWidget);
+    await tester.tap(find.text('Voltar'));
+    await tester.pump();
+    expect(find.text('Coloque a xícara na Gaggia'), findsOneWidget);
+    await finish(tester);
+  });
+
+  testWidgets('xícara desconhecida pode ser cadastrada pelo resumo', (tester) async {
+    await pump(tester);
+    await toCup(tester);
+    await hold(tester, 120, readings: 10);
+    await ramp(tester, 120, 155.6, 270);
+    await hold(tester, 155.6, readings: 50);
+    await tester.tap(find.text('Cadastrar xícara'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('120.0 g'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Branca');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+    final cup = espresso.containers.singleWhere((c) => c.kind == ContainerKind.cup);
+    expect((cup.name, cup.grams), ('Branca', 120.0));
+    expect(find.text('Branca'), findsOneWidget); // no resumo
+    expect(find.text('Cadastrar xícara'), findsNothing);
+    await finish(tester);
+  });
+
   testWidgets('aviso de desconexão aparece', (tester) async {
     await pump(tester);
     await toCup(tester);

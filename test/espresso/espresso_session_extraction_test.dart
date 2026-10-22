@@ -108,6 +108,34 @@ void main() {
     expect(session.step, EspressoStep.idle);
   });
 
+  test('levantar a xícara na pré-infusão não volta de fase nem zera o cronômetro', () {
+    d.hold(cup, secs(1));
+    session.startTimer(d.now);
+    final started = d.now;
+    d.hold(cup, secs(2));
+    d.hold(0, secs(2));
+    expect(session.step, EspressoStep.preInfusion);
+    expect(session.canGoBack, isTrue);
+    d.hold(cup, secs(3));
+    expect(session.step, EspressoStep.preInfusion);
+    expect(session.timerStartedAt, started);
+    expect(session.netGrams, 0.0);
+    d.ramp(cup, cup + 36, secs(27));
+    d.hold(cup + 36, secs(5));
+    final r = session.result!;
+    expectDuration(r.preInfusion, 7); // 2 s + 2 s sem a xícara + 3 s
+    expect(r.beverage, 36.0);
+  });
+
+  test('o resumo guarda o peso da xícara para cadastrá-la', () {
+    shot();
+    expect(session.result!.cupName, isNull);
+    expect(session.result!.cupGrams, cup);
+    session.nameResultCup('Branca');
+    expect(session.result!.cupName, 'Branca');
+    expect(session.result!.beverage, 36.0);
+  });
+
   test('vibração não inicia o cronômetro', () {
     for (var i = 0; i < 5; i++) {
       d.hold(cup, secs(1));

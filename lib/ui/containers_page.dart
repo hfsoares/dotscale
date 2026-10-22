@@ -81,7 +81,7 @@ class ContainersPage extends StatelessWidget {
   Future<void> _rename(BuildContext context, ScaleContainer container) async {
     final name = await showDialog<String>(
       context: context,
-      builder: (context) => _NameDialog(title: 'Renomear', initial: container.name),
+      builder: (context) => NameDialog(title: 'Renomear', initial: container.name),
     );
     if (name != null) await controller.rename(container.id, name);
   }
@@ -156,17 +156,18 @@ class _RegisterDialogState extends State<_RegisterDialog> {
   }
 }
 
-class _NameDialog extends StatefulWidget {
-  const _NameDialog({required this.title, required this.initial});
+/// Pede um nome; devolve o nome digitado, ou null se cancelar.
+class NameDialog extends StatefulWidget {
+  const NameDialog({super.key, required this.title, required this.initial});
 
   final String title;
   final String initial;
 
   @override
-  State<_NameDialog> createState() => _NameDialogState();
+  State<NameDialog> createState() => _NameDialogState();
 }
 
-class _NameDialogState extends State<_NameDialog> {
+class _NameDialogState extends State<NameDialog> {
   late final _name = TextEditingController(text: widget.initial);
 
   @override

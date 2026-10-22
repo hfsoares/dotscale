@@ -131,25 +131,84 @@ void main() {
     expect(session.netGrams, 0.0);
   });
 
-  test('tirar a xícara antes das gotas tara de novo o próximo objeto', () {
+  test('tirar a xícara em Xícara pronta não volta de fase; a próxima é tarada', () {
     weighBeans();
     grounds();
     d.hold(133, s);
     d.hold(0, s);
-    expect(session.step, EspressoStep.awaitingCup);
+    expect(session.step, EspressoStep.cupReady);
     d.hold(150, s);
     expect(session.step, EspressoStep.cupReady);
     expect(session.cupName, 'Azul');
     expect(session.netGrams, 0.0);
   });
 
-  test('dosímetro no meio do preparo reinicia', () {
+  test('em Coloque a xícara, o peso do dosímetro é a xícara', () {
     weighBeans();
     grounds();
     d.hold(80, s);
-    expect(session.step, EspressoStep.weighingBeans);
+    expect(session.step, EspressoStep.cupReady);
+    expect(session.beans, 18.0);
+    expect(session.dose, 17.8);
+    expect(session.netGrams, 0.0);
+  });
+
+  test('em Coloque a xícara, o peso do copinho é a xícara', () {
+    weighBeans();
+    grounds();
+    d.hold(40, s);
+    expect(session.step, EspressoStep.cupReady);
+    expect(session.netGrams, 0.0);
+  });
+
+  test('dosímetro em Coloque o copinho não recomeça', () {
+    weighBeans();
+    d.hold(80, s);
+    expect(session.step, EspressoStep.cupReady);
+    expect(session.beans, 18.0);
+  });
+
+  test('Voltar só vale com a balança zerada', () {
+    weighBeans();
+    expect(session.canGoBack, isTrue);
+    d.hold(40, s); // copinho vazio na balança
+    expect(session.canGoBack, isFalse);
+    session.goBack();
+    expect(session.step, EspressoStep.awaitingGrounds);
+  });
+
+  test('Voltar de Coloque o copinho recomeça a pesagem dos grãos', () {
+    weighBeans();
+    session.goBack();
+    expect(session.step, EspressoStep.idle);
     expect(session.beans, isNull);
+    d.hold(80, s);
+    expect(session.step, EspressoStep.weighingBeans);
+  });
+
+  test('Voltar de Coloque a xícara volta para o pó', () {
+    weighBeans();
+    grounds();
+    session.goBack();
+    expect(session.step, EspressoStep.awaitingGrounds);
+    expect(session.beans, 18.0);
     expect(session.dose, isNull);
+    expect(session.retention, isNull);
+    grounds(17.5);
+    expect(session.dose, 17.5);
+  });
+
+  test('Voltar de Xícara pronta volta para Coloque a xícara', () {
+    weighBeans();
+    grounds();
+    d.hold(133, s);
+    d.hold(0, s);
+    session.goBack();
+    expect(session.step, EspressoStep.awaitingCup);
+    expect(session.dose, 17.8);
+    d.hold(150, s);
+    expect(session.step, EspressoStep.cupReady);
+    expect(session.cupName, 'Azul');
   });
 
   test('peso oscilando perto de 1 g não rearma nem vira objeto', () {

@@ -19,6 +19,9 @@ class EspressoResult {
   final Duration extraction;
   final Duration? preInfusion;
   final String? cupName;
+
+  /// Tara da xícara: o peso para cadastrá-la, se ela não era conhecida.
+  final double? cupGrams;
   final List<WeightSample> samples;
 
   /// A conexão caiu durante a extração: os números podem estar errados.
@@ -31,17 +34,32 @@ class EspressoResult {
     required this.extraction,
     required this.preInfusion,
     required this.cupName,
+    this.cupGrams,
     required this.samples,
     this.interrupted = false,
   });
 
   double get ratio => beverage / dose;
+
+  EspressoResult withCupName(String name) => EspressoResult(
+    dose: dose,
+    beans: beans,
+    beverage: beverage,
+    extraction: extraction,
+    preInfusion: preInfusion,
+    cupName: name,
+    cupGrams: cupGrams,
+    samples: samples,
+    interrupted: interrupted,
+  );
 }
 
 /// Máquina de estados do espresso, alimentada pelo peso bruto da Dot.
 ///
 /// Reconhecimento: só o primeiro peso estável depois de a balança ficar vazia
 /// identifica um objeto ("rearme"); encher um recipiente não o re-reconhece.
+///
+/// O peso só faz as fases avançarem. Voltar é um toque em "Voltar", com a balança zerada.
 class EspressoSession {
   EspressoSession({List<ScaleContainer> containers = const [], this.tuning = const EspressoTuning()})
     : containers = List.unmodifiable(containers),
@@ -159,6 +177,41 @@ class EspressoSession {
 
   /// "Finalizar": tira o resumo da tela.
   void dismissResult() => _result = null;
+
+  /// Dá nome à xícara do resumo, depois de cadastrada.
+  void nameResultCup(String name) => _result = _result?.withCupName(name);
+
+  /// "Voltar" está disponível: uma fase com volta e a balança zerada.
+  bool get canGoBack {
+    const withBack = {
+      EspressoStep.awaitingGrounds,
+      EspressoStep.awaitingCup,
+      EspressoStep.cupReady,
+      EspressoStep.preInfusion,
+    };
+    final stable = _stability.stableGrams;
+    return withBack.contains(_step) && stable != null && stable.abs() < tuning.emptyBelow;
+  }
+
+  void goBack() {
+    if (!canGoBack) return;
+    switch (_step) {
+      case EspressoStep.awaitingGrounds:
+        // Antes do pó vem a pesagem dos grãos, que começa pelo dosímetro.
+        _clearSession();
+      case EspressoStep.awaitingCup:
+        _dose = null;
+        _retention = null;
+        _grinderCupOnScale = false;
+        _step = EspressoStep.awaitingGrounds;
+      default:
+        // Xícara pronta ou pré-infusão: troca de xícara; o cronômetro, se já corre, segue.
+        _offset = 0;
+        _cupName = null;
+        _resetCupTracking();
+        _step = EspressoStep.awaitingCup;
+    }
+  }
 
   void useBeansAsDose() {
     if (_step != EspressoStep.awaitingGrounds) return;
@@ -284,6 +337,7 @@ class EspressoSession {
       extraction: end.difference(_extractionStart!),
       preInfusion: _timerStart == null ? null : _extractionStart!.difference(_timerStart!),
       cupName: _cupName,
+      cupGrams: _offset,
       samples: List.unmodifiable(kept),
       interrupted: _hadGap,
     );
@@ -303,18 +357,14 @@ class EspressoSession {
           _offset = 0;
           _step = EspressoStep.awaitingGrounds;
         }
-      case EspressoStep.cupReady || EspressoStep.preInfusion:
-        _offset = 0;
-        _cupName = null;
-        _resetCupTracking();
-        _step = EspressoStep.awaitingCup;
       default:
+        // Xícara levantada (ou nada mudou): a fase fica; o próximo objeto é a xícara.
         break;
     }
   }
 
   void _onObject(double grams) {
-    if (_step != EspressoStep.extracting && _matching(ContainerKind.doser, grams) != null) {
+    if (_step == EspressoStep.idle && _matching(ContainerKind.doser, grams) != null) {
       _clearSession();
       _result = null;
       _offset = grams;
@@ -343,11 +393,8 @@ class EspressoSession {
         if (_grinderCupOnScale) return;
         _dose = beans;
         _tareCup(grams);
-      case EspressoStep.awaitingCup:
-        if (_matching(ContainerKind.grinderCup, grams) != null) {
-          _armed = false;
-          return;
-        }
+      case EspressoStep.awaitingCup || EspressoStep.cupReady || EspressoStep.preInfusion:
+        // Depois do pó, o que vier é a xícara, mesmo com o peso de outro recipiente.
         _tareCup(grams);
       default:
         _armed = false;

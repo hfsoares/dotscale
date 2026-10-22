@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../espresso/espresso_session.dart';
+import 'containers_page.dart';
 import 'espresso_controller.dart';
 import 'format.dart';
 
@@ -95,7 +96,7 @@ class _EspressoPanelState extends State<EspressoPanel> {
             ),
           ),
         ..._details(session, step),
-        if (showResult) _ResultCard(result: session.result!),
+        if (showResult) _ResultCard(result: session.result!, onRegisterCup: () => _registerCup(context)),
         const SizedBox(height: 16),
         if (step == EspressoStep.awaitingGrounds)
           FilledButton(onPressed: espresso.useBeansAsDose, child: const Text('Usar peso dos grãos')),
@@ -105,10 +106,27 @@ class _EspressoPanelState extends State<EspressoPanel> {
         if (step != EspressoStep.idle)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: OutlinedButton(onPressed: espresso.cancel, child: const Text('Cancelar')),
+            child: Wrap(
+              spacing: 12,
+              alignment: WrapAlignment.center,
+              children: [
+                if (session.canGoBack) OutlinedButton(onPressed: espresso.goBack, child: const Text('Voltar')),
+                OutlinedButton(onPressed: espresso.cancel, child: const Text('Cancelar')),
+              ],
+            ),
           ),
       ],
     );
+  }
+
+  Future<void> _registerCup(BuildContext context) async {
+    final grams = widget.espresso.session.result?.cupGrams;
+    if (grams == null) return;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => NameDialog(title: 'Cadastrar xícara · ${formatGrams(grams)}', initial: ''),
+    );
+    if (name != null) await widget.espresso.registerResultCup(name);
   }
 
   List<Widget> _details(EspressoSession session, EspressoStep step) {
@@ -205,9 +223,10 @@ class _BigButton extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.result});
+  const _ResultCard({required this.result, required this.onRegisterCup});
 
   final EspressoResult result;
+  final VoidCallback onRegisterCup;
 
   @override
   Widget build(BuildContext context) {
@@ -251,6 +270,11 @@ class _ResultCard extends StatelessWidget {
                   ),
               ],
             ),
+            if (result.cupName == null && result.cupGrams != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: OutlinedButton(onPressed: onRegisterCup, child: const Text('Cadastrar xícara')),
+              ),
           ],
         ),
       ),

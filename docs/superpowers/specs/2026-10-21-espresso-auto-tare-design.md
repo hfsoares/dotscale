@@ -118,18 +118,20 @@ Estados e o que a tela mostra como instrução principal:
      mostra "Dose 17.8 g · retenção 0.2 g";
    - primeiro estável bate só com o **copinho vazio** → ignora e continua
      esperando (o usuário pode estar no meio do caminho);
-   - primeiro estável é **qualquer outra coisa** (não bate com dosímetro) →
+   - primeiro estável é **qualquer outra coisa** (inclusive o peso do dosímetro) →
      dose = grãos, e esse objeto já é tratado como a xícara (passo 5);
    - botão **"Usar peso dos grãos"** → dose = grãos.
    Instrução: "Coloque a xícara na Gaggia".
-5. **Xícara tarada:** primeiro estável após o vazio → offset = esse peso. Se
-   bater com uma xícara cadastrada, mostra o nome. Um dosímetro reinicia o
-   espresso; um copinho do moedor vazio é ignorado (minha decisão). Se a
-   balança voltar a ficar vazia **antes** das primeiras gotas (o usuário
-   tirou a xícara para ajeitar), o próximo objeto é tarado de novo.
-   Mostra bebida 0.0 g, ratio, botão **"Iniciar"**.
-6. **Pré-infusão** (só se o usuário tocar em "Iniciar"): cronômetro corre
-   desde o toque.
+5. **Xícara tarada:** primeiro estável após o vazio → offset = esse peso, sempre:
+   nessa fase o próximo peso é a xícara, mesmo que bata com o dosímetro ou com o
+   copinho (pedido do usuário, 2026-10-22). Se bater com uma xícara cadastrada,
+   mostra o nome. Se a balança ficar vazia **antes** das primeiras gotas (o
+   usuário tirou a xícara para ajeitar), a fase não muda e o próximo objeto é
+   tarado de novo; na pré-infusão o cronômetro continua.
+   Mostra o peso 0.0 g e o botão grande **"Pré-infusão"**.
+6. **Pré-infusão** (só se o usuário tocar em "Pré-infusão"): cronômetro corre
+   desde o toque. O botão grande **"Infusão"** começa a extração no toque, sem
+   esperar as gotas; aí o fim só conta depois que o líquido começar a subir.
 7. **Extraindo:** começa quando aparecem as primeiras gotas (minha decisão
    sobre a regra exata, calculada só a partir de `(instante, peso)`; o fluxo
    que a Dot manda não entra na máquina):
@@ -151,8 +153,13 @@ Estados e o que a tela mostra como instrução principal:
 
 Outras regras:
 
-- **Dosímetro reconhecido em qualquer estado que não seja Extraindo** reinicia o
-  espresso (o usuário recomeçou).
+- **As fases só avançam pelo peso** (pedido do usuário, 2026-10-22). O dosímetro
+  só inicia um espresso em Ocioso (com ou sem resultado na tela). Para voltar uma
+  fase, a balança precisa estar zerada: aí aparece **"Voltar"**. Copinho → início
+  (pesar os grãos de novo); xícara → pó; xícara pronta/pré-infusão → "Coloque a
+  xícara" (o cronômetro da pré-infusão, se já corre, segue).
+- **Xícara desconhecida:** o resultado guarda a tara da xícara e o resumo oferece
+  **"Cadastrar xícara"**, pedindo só o nome.
 - Botão **"Cancelar"** volta para Ocioso, sem resultado.
 - **Botão "Tarar" (manual, v1)** só aparece/fica habilitado em Ocioso (com ou
   sem resultado na tela). Durante o fluxo ele mudaria o zero de que todo o
@@ -216,7 +223,8 @@ Cenários da máquina de estados com sequências de leituras sintéticas:
 - botão "Iniciar" com pré-infusão;
 - vibração: picos curtos de +2 g que voltam não iniciam o cronômetro;
 - tirar a balança depois do fim (peso cai/oscila) não muda o resultado;
-- dosímetro no meio do fluxo reinicia;
+- dosímetro ou copinho no lugar da xícara viram a xícara; nada recomeça;
+- "Voltar" só com a balança zerada, uma fase por vez;
 - grãos < 3 g voltam para Ocioso;
 - desconexão no meio da extração (lacuna nas leituras).
 
