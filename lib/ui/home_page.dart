@@ -23,23 +23,12 @@ class HomePage extends StatelessWidget {
         final status = controller.status;
         return Scaffold(
           appBar: AppBar(
-            title: Text(status.deviceName?.isNotEmpty == true ? status.deviceName! : 'DotScale'),
+            // O nome da balança já diz que ela está conectada; caindo, o título avisa.
+            title: Text(_title(status)),
             actions: [
-              _ConnectionIcon(phase: status.phase, onDisconnect: controller.connection.disconnect),
               if (status.phase == ConnectionPhase.connected && controller.batteryPercent != null)
                 _Battery(percent: controller.batteryPercent!),
-              IconButton(
-                tooltip: 'Recipientes',
-                icon: const Icon(Icons.coffee),
-                onPressed: () => _openContainers(context, espresso),
-              ),
-              IconButton(
-                tooltip: 'Configurações',
-                icon: const Icon(Icons.settings),
-                onPressed: () =>
-                    Navigator.of(context)
-                        .push(MaterialPageRoute<void>(builder: (_) => SettingsPage(controller: controller))),
-              ),
+              _Menu(controller: controller, espresso: espresso, phase: status.phase),
             ],
           ),
           body: SafeArea(
@@ -100,37 +89,38 @@ String _phaseText(ConnectionPhase phase) => switch (phase) {
   ConnectionPhase.error => 'Erro',
 };
 
-/// Estado da conexão só como ícone; o texto fica no tooltip. Conectado, o toque abre o Desconectar.
-class _ConnectionIcon extends StatelessWidget {
-  const _ConnectionIcon({required this.phase, required this.onDisconnect});
+String _title(ConnectionStatus status) => switch (status.phase) {
+  ConnectionPhase.reconnecting => 'Reconectando…',
+  ConnectionPhase.connected when status.deviceName?.isNotEmpty == true => status.deviceName!,
+  _ => 'DotScale',
+};
 
+enum _MenuItem { containers, settings, disconnect }
+
+class _Menu extends StatelessWidget {
+  const _Menu({required this.controller, required this.espresso, required this.phase});
+
+  final ScaleController controller;
+  final EspressoController espresso;
   final ConnectionPhase phase;
-  final VoidCallback onDisconnect;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final (icon, label, color) = switch (phase) {
-      ConnectionPhase.connected => (Icons.bluetooth_connected, 'Conectado', scheme.onSurfaceVariant),
-      ConnectionPhase.reconnecting => (Icons.bluetooth_searching, 'Reconectando…', scheme.error),
-      ConnectionPhase.scanning => (Icons.bluetooth_searching, 'Procurando…', scheme.onSurfaceVariant),
-      ConnectionPhase.connecting => (Icons.bluetooth_searching, 'Conectando…', scheme.onSurfaceVariant),
-      ConnectionPhase.pairing => (Icons.bluetooth_searching, 'Pareando…', scheme.onSurfaceVariant),
-      _ => (Icons.bluetooth_disabled, 'Desconectado', scheme.onSurfaceVariant),
-    };
-    if (phase == ConnectionPhase.connected || phase == ConnectionPhase.reconnecting) {
-      return PopupMenuButton<void>(
-        tooltip: label,
-        icon: Icon(icon, size: 20, color: color),
-        itemBuilder: (_) => [PopupMenuItem(onTap: onDisconnect, child: const Text('Desconectar'))],
-      );
-    }
-    return Tooltip(
-      message: label,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Icon(icon, size: 20, color: color, semanticLabel: label),
-      ),
+    final linked = phase == ConnectionPhase.connected || phase == ConnectionPhase.reconnecting;
+    return PopupMenuButton<_MenuItem>(
+      tooltip: 'Menu',
+      onSelected: (item) => switch (item) {
+        _MenuItem.containers => _openContainers(context, espresso),
+        _MenuItem.settings => Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => SettingsPage(controller: controller))),
+        _MenuItem.disconnect => controller.connection.disconnect(),
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: _MenuItem.containers, child: Text('Recipientes')),
+        const PopupMenuItem(value: _MenuItem.settings, child: Text('Configurações')),
+        if (linked) const PopupMenuItem(value: _MenuItem.disconnect, child: Text('Desconectar')),
+      ],
     );
   }
 }

@@ -58,16 +58,19 @@ void main() {
     await tester.pump(const Duration(seconds: 3)); // deixa o timer de peso parado expirar
   });
 
-  testWidgets('conexão e bateria ficam discretas na barra do topo', (tester) async {
+  testWidgets('topo só com o nome da balança, a bateria e o menu', (tester) async {
     await pump(tester);
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected, deviceName: 'TIMEMORE_Dot_01'));
     fake.emitEvent(_w);
     fake.emitEvent(const BatteryReading(87));
     await tester.pump();
-    expect(find.text('Conectado'), findsNothing);
     final appBar = find.byType(AppBar);
-    expect(find.descendant(of: appBar, matching: find.byIcon(Icons.bluetooth_connected)), findsOneWidget);
-    expect(find.descendant(of: appBar, matching: find.byTooltip('Conectado')), findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.text('TIMEMORE_Dot_01')), findsOneWidget);
+    expect(find.descendant(of: appBar, matching: find.byType(IconButton)), findsOneWidget); // só o do menu
+    expect(find.descendant(of: appBar, matching: find.byTooltip('Menu')), findsOneWidget);
+    expect(find.byIcon(Icons.bluetooth_connected), findsNothing);
+    expect(find.byIcon(Icons.coffee), findsNothing);
+    expect(find.byIcon(Icons.settings), findsNothing);
     expect(find.descendant(of: appBar, matching: find.text('87%')), findsOneWidget);
     expect(find.descendant(of: appBar, matching: find.byIcon(Icons.battery_6_bar)), findsOneWidget);
     await tester.pump(const Duration(seconds: 3));
@@ -86,18 +89,37 @@ void main() {
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.pairing));
     await tester.pump();
     expect(find.text('Pareando… confirme no aviso do sistema, se aparecer'), findsOneWidget);
-    expect(find.byTooltip('Pareando…'), findsOneWidget);
   });
 
-  testWidgets('Desconectar fica no menu do ícone de conexão', (tester) async {
+  testWidgets('Desconectar fica no menu', (tester) async {
     await pump(tester);
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
     await tester.pump();
     expect(find.text('Desconectar'), findsNothing);
-    await tester.tap(find.byTooltip('Conectado'));
+    await tester.tap(find.byTooltip('Menu'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Desconectar'));
     expect(fake.calls, contains('disconnect'));
+  });
+
+  testWidgets('Recipientes abre pelo menu', (tester) async {
+    await pump(tester);
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Recipientes').last); // o item do menu, por cima do botão do corpo
+    await tester.pumpAndSettle();
+    expect(find.text('Cadastrar recipiente'), findsOneWidget);
+  });
+
+  testWidgets('sem balança conectada o menu não oferece Desconectar', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Recipientes'), findsOneWidget);
+    expect(find.text('Configurações'), findsOneWidget);
+    expect(find.text('Desconectar'), findsNothing);
   });
 
   testWidgets('Bluetooth desligado oferece Tentar de novo', (tester) async {
@@ -122,9 +144,11 @@ void main() {
     fake.emitStatus(const ConnectionStatus(ConnectionPhase.connected));
     fake.emitEvent(_w);
     await tester.pump();
-    fake.emitStatus(const ConnectionStatus(ConnectionPhase.reconnecting));
+    fake.emitStatus(const ConnectionStatus(ConnectionPhase.reconnecting, deviceName: 'TIMEMORE_Dot_01'));
     await tester.pump();
-    expect(find.byTooltip('Reconectando…'), findsOneWidget);
+    final appBar = find.byType(AppBar);
+    expect(find.descendant(of: appBar, matching: find.text('Reconectando…')), findsOneWidget);
+    expect(find.text('TIMEMORE_Dot_01'), findsNothing);
     final opacity = tester.widget<Opacity>(
       find.ancestor(of: find.text('18.4 g'), matching: find.byType(Opacity)).first,
     );
@@ -147,7 +171,9 @@ void main() {
     fake.emitFrame(FrameLogEntry(at: DateTime(2026), outgoing: true, bytes: Uint8List.fromList([0xA5, 0x5A, 0x03])));
     await tester.pump();
     expect(find.text('Debug'), findsNothing);
-    await tester.tap(find.byTooltip('Configurações'));
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configurações'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Debug'));
     await tester.pumpAndSettle();
