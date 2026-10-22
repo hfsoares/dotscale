@@ -175,7 +175,7 @@ class _Metric extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 text: value,
-                style: const TextStyle(fontSize: 72, fontWeight: FontWeight.w600, fontFeatures: _tabular),
+                style: const TextStyle(fontSize: 72, height: 1.1, fontWeight: FontWeight.w600, fontFeatures: _tabular),
                 children: [TextSpan(text: unit, style: const TextStyle(fontSize: 32))],
               ),
             ),
