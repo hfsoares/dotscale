@@ -76,6 +76,8 @@ class EspressoSession {
   ({DateTime at, double net})? _lastRise;
   double? _prevNet;
   bool _hadGap = false;
+  // Extração começada no botão: o fim só vale depois que o líquido começar a subir.
+  bool _awaitingFlow = false;
 
   EspressoStep get step => _step;
   double? get rawGrams => _raw;
@@ -142,6 +144,21 @@ class EspressoSession {
     _timerStart = at;
     _step = EspressoStep.preInfusion;
   }
+
+  /// "Infusão": encerra a pré-infusão no toque, sem esperar as gotas.
+  void startExtraction(DateTime at) {
+    if (_step != EspressoStep.preInfusion) return;
+    final net = netGrams ?? 0;
+    _dripCandidate = null;
+    _extractionStart = at;
+    _lastRise = (at: at, net: net);
+    _prevNet = net;
+    _awaitingFlow = true;
+    _step = EspressoStep.extracting;
+  }
+
+  /// "Finalizar": tira o resumo da tela.
+  void dismissResult() => _result = null;
 
   void useBeansAsDose() {
     if (_step != EspressoStep.awaitingGrounds) return;
@@ -231,7 +248,12 @@ class EspressoSession {
       return;
     }
     if (net > _lastRise!.net + tuning.endMinRise) {
+      _awaitingFlow = false;
       _lastRise = (at: at, net: net);
+      return;
+    }
+    if (_awaitingFlow) {
+      _lastRise = (at: at, net: _lastRise!.net);
       return;
     }
     if (at.difference(_lastRise!.at) >= tuning.endWindow) _finish(before: at.add(const Duration(microseconds: 1)));
@@ -368,6 +390,7 @@ class EspressoSession {
     _resetCupTracking();
     _timerStart = null;
     _extractionStart = null;
+    _awaitingFlow = false;
     _lastRise = null;
     _prevNet = null;
     _hadGap = false;

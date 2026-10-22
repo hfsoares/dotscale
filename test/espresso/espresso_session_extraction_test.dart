@@ -78,6 +78,36 @@ void main() {
     expect(session.step, EspressoStep.idle);
   });
 
+  test('Infusão começa a extração na hora do toque', () {
+    d.hold(cup, secs(1));
+    session.startTimer(d.now);
+    d.hold(cup, secs(5));
+    session.startExtraction(d.now);
+    expect(session.step, EspressoStep.extracting);
+    expect(session.extractionStartedAt, d.now);
+    d.hold(cup, secs(6)); // a água ainda não chegou: não pode dar o fim
+    expect(session.step, EspressoStep.extracting);
+    d.ramp(cup, cup + 36, secs(24));
+    d.hold(cup + 36, secs(5));
+    final r = session.result!;
+    expectDuration(r.preInfusion, 5);
+    expectDuration(r.extraction, 30);
+    expect(r.beverage, 36.0);
+  });
+
+  test('Infusão fora da pré-infusão não faz nada', () {
+    session.startExtraction(d.now);
+    expect(session.step, EspressoStep.cupReady);
+  });
+
+  test('Finalizar apaga o resumo', () {
+    shot();
+    expect(session.result, isNotNull);
+    session.dismissResult();
+    expect(session.result, isNull);
+    expect(session.step, EspressoStep.idle);
+  });
+
   test('vibração não inicia o cronômetro', () {
     for (var i = 0; i < 5; i++) {
       d.hold(cup, secs(1));

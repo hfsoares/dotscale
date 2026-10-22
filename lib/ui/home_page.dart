@@ -183,8 +183,11 @@ class _LiveView extends StatelessWidget {
     final weight = controller.lastWeight;
     final secondary = Theme.of(context).textTheme.titleLarge
         ?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    final session = espresso.session;
+    // O resumo do último espresso ocupa a tela até o Finalizar.
+    final showResult = session.step == EspressoStep.idle && session.result != null;
     // A tara manual mexe no zero de que o reconhecimento depende: só antes do dosímetro.
-    final showTare = espresso.session.step == EspressoStep.idle;
+    final showTare = session.step == EspressoStep.idle && !showResult;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: SizedBox(
@@ -200,18 +203,19 @@ class _LiveView extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             EspressoPanel(espresso: espresso, live: controller.isLive),
-            const SizedBox(height: 8),
-            Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
+            if (!showResult) ...[
+              const SizedBox(height: 8),
+              Text(weight == null ? '-- g/s' : formatFlow(weight.flowGramsPerSecond), style: secondary),
+            ],
             if (showTare) ...[
               const SizedBox(height: 24),
-              FilledButton.icon(
+              FilledButton(
                 onPressed: controller.isLive ? controller.tare : null,
-                icon: const Icon(Icons.exposure_zero),
-                label: const Text('Tarar'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size(220, 72),
                   textStyle: Theme.of(context).textTheme.headlineSmall,
                 ),
+                child: const Text('Tarar'),
               ),
               if (controller.tareError != null)
                 Padding(

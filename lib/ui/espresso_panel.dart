@@ -49,12 +49,12 @@ class _EspressoPanelState extends State<EspressoPanel> {
     _syncTicker(elapsed != null);
 
     final theme = Theme.of(context);
-    final secondary = theme.textTheme.titleLarge?.copyWith(fontFeatures: _tabular);
     final net = session.netGrams;
     final shown = session.displayGrams;
     final instruction = _instruction(step);
     final dose = session.dose;
-    final withCup = {EspressoStep.cupReady, EspressoStep.preInfusion, EspressoStep.extracting}.contains(step);
+    final timed = step == EspressoStep.preInfusion || step == EspressoStep.extracting;
+    final showResult = step == EspressoStep.idle && session.result != null;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -69,40 +69,44 @@ class _EspressoPanelState extends State<EspressoPanel> {
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
-        Opacity(
-          opacity: widget.live ? 1 : 0.35,
-          child: FittedBox(
-            child: Text(
-              shown == null ? '--' : formatGrams(shown),
-              style: const TextStyle(fontSize: 88, fontWeight: FontWeight.w600, fontFeatures: _tabular),
+        if (timed)
+          // Bebida, ratio e tempo pesam igual enquanto o café sai.
+          Opacity(
+            opacity: widget.live ? 1 : 0.35,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  _Metric('Bebida', net == null ? '--' : formatGrams(net < 0 ? 0 : net)),
+                  _Metric('Ratio', net == null || dose == null ? '--' : formatRatio(net < 0 ? 0 : net, dose)),
+                  _Metric('Tempo', elapsed == null ? '--' : formatSeconds(elapsed)),
+                ],
+              ),
+            ),
+          )
+        else if (!showResult)
+          Opacity(
+            opacity: widget.live ? 1 : 0.35,
+            child: FittedBox(
+              child: Text(
+                shown == null ? '--' : formatGrams(shown),
+                style: const TextStyle(fontSize: 88, fontWeight: FontWeight.w600, fontFeatures: _tabular),
+              ),
             ),
           ),
-        ),
         ..._details(session, step),
-        if (withCup && dose != null && net != null)
+        if (showResult) _ResultCard(result: session.result!),
+        const SizedBox(height: 16),
+        if (step == EspressoStep.awaitingGrounds)
+          FilledButton(onPressed: espresso.useBeansAsDose, child: const Text('Usar peso dos grãos')),
+        if (step == EspressoStep.cupReady) _BigButton('Pré-infusão', onPressed: espresso.startTimer),
+        if (step == EspressoStep.preInfusion) _BigButton('Infusão', onPressed: espresso.startExtraction),
+        if (showResult) _BigButton('Finalizar', onPressed: espresso.dismissResult),
+        if (step != EspressoStep.idle)
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(formatRatio(net < 0 ? 0 : net, dose), style: secondary),
-                if (elapsed != null) ...[const SizedBox(width: 32), Text(formatSeconds(elapsed), style: secondary)],
-              ],
-            ),
+            child: OutlinedButton(onPressed: espresso.cancel, child: const Text('Cancelar')),
           ),
-        if (step == EspressoStep.idle && session.result != null) _ResultCard(result: session.result!),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          alignment: WrapAlignment.center,
-          children: [
-            if (step == EspressoStep.awaitingGrounds)
-              FilledButton(onPressed: espresso.useBeansAsDose, child: const Text('Usar peso dos grãos')),
-            if (step == EspressoStep.cupReady)
-              FilledButton(onPressed: espresso.startTimer, child: const Text('Iniciar')),
-            if (step != EspressoStep.idle) OutlinedButton(onPressed: espresso.cancel, child: const Text('Cancelar')),
-          ],
-        ),
       ],
     );
   }
@@ -132,10 +136,60 @@ String? _instruction(EspressoStep step) => switch (step) {
   EspressoStep.weighingBeans => 'Grãos',
   EspressoStep.awaitingGrounds => 'Coloque o copinho com o pó',
   EspressoStep.awaitingCup => 'Coloque a xícara na Gaggia',
-  EspressoStep.cupReady => 'Pronto — inicie a extração',
+  EspressoStep.cupReady => 'Pronto — inicie a pré-infusão',
   EspressoStep.preInfusion => 'Pré-infusão',
   EspressoStep.extracting => 'Extraindo',
 };
+
+/// Um dos três números da extração: rótulo pequeno em cima, valor grande com a unidade menor.
+class _Metric extends StatelessWidget {
+  const _Metric(this.label, this.text);
+
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final split = text.lastIndexOf(' ');
+    final value = split < 0 ? text : text.substring(0, split);
+    final unit = split < 0 ? '' : text.substring(split);
+    return Expanded(
+      child: Column(
+        children: [
+          Text(label, style: theme.textTheme.titleMedium),
+          FittedBox(
+            child: Text.rich(
+              TextSpan(
+                text: value,
+                style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w600, fontFeatures: _tabular),
+                children: [TextSpan(text: unit, style: const TextStyle(fontSize: 22))],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Botão do próximo passo: grande, para acertar com a mão ocupada.
+class _BigButton extends StatelessWidget {
+  const _BigButton(this.label, {required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: onPressed,
+    style: FilledButton.styleFrom(
+      minimumSize: const Size.fromHeight(96),
+      textStyle: Theme.of(context).textTheme.headlineMedium,
+    ),
+    child: Text(label),
+  );
+}
 
 class _ResultCard extends StatelessWidget {
   const _ResultCard({required this.result});

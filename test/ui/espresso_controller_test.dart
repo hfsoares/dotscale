@@ -121,4 +121,19 @@ void main() {
     t = t.add(const Duration(seconds: 5));
     expect(controller.elapsed(), const Duration(seconds: 5));
   });
+
+  test('na extração, elapsed conta desde o início da extração', () async {
+    await setUpWith([doser, grinderCup]);
+    hold(0);
+    hold(80);
+    hold(98);
+    hold(0);
+    hold(120);
+    controller.startTimer();
+    t = t.add(const Duration(seconds: 8));
+    controller.startExtraction();
+    t = t.add(const Duration(seconds: 3));
+    expect(controller.session.step, EspressoStep.extracting);
+    expect(controller.elapsed(), const Duration(seconds: 3));
+  });
 }

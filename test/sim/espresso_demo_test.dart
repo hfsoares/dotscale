@@ -8,7 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('o espresso de demonstração passa por todas as fases', (tester) async {
     late EspressoController espresso;
-    final connection = SimulatedDotConnection(espressoDemo(pressStart: () => espresso.startTimer()));
+    final connection = SimulatedDotConnection(
+      espressoDemo(pressStart: () => espresso.startTimer(), pressFinish: () => espresso.dismissResult()),
+    );
     espresso = EspressoController(
       connection,
       MemoryContainerStore(demoContainers),
@@ -18,9 +20,12 @@ void main() {
     await espresso.load();
 
     final steps = <String, EspressoStep>{};
+    EspressoResult? result;
     final printer = debugPrint;
     debugPrint = (message, {wrapWidth}) {
-      if (message != null && message.startsWith('SIMSHOT ')) steps[message.substring(8)] = espresso.session.step;
+      if (message == null || !message.startsWith('SIMSHOT ')) return;
+      steps[message.substring(8)] = espresso.session.step;
+      if (message == 'SIMSHOT 13-resultado-fora-da-gaggia') result = espresso.session.result;
     };
 
     await connection.reconnectLast();
@@ -46,9 +51,11 @@ void main() {
       '11-fluxo-parou': EspressoStep.extracting,
       '12-resultado': EspressoStep.idle,
       '13-resultado-fora-da-gaggia': EspressoStep.idle,
+      '14-finalizado': EspressoStep.idle,
       'end': EspressoStep.idle,
     });
-    final r = espresso.session.result!;
+    expect(espresso.session.result, isNull);
+    final r = result!;
     expect(r.beans, closeTo(18.2, 0.15));
     expect(r.dose, closeTo(17.9, 0.15));
     expect(r.beverage, closeTo(36.1, 0.15));

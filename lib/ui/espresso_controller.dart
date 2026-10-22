@@ -76,14 +76,19 @@ class EspressoController extends ChangeNotifier {
   ]);
 
   void startTimer() => _act(() => session.startTimer(now()));
+  void startExtraction() => _act(() => session.startExtraction(now()));
   void useBeansAsDose() => _act(session.useBeansAsDose);
+  void dismissResult() => _act(session.dismissResult);
   void cancel() => _act(session.cancel);
 
-  /// Tempo do cronômetro enquanto ele corre.
+  /// Tempo da fase em curso: a pré-infusão desde o "Pré-infusão", a extração desde o seu início.
   Duration? elapsed() {
-    final started = session.timerStartedAt;
-    final running = session.step == EspressoStep.preInfusion || session.step == EspressoStep.extracting;
-    return running && started != null ? now().difference(started) : null;
+    final started = switch (session.step) {
+      EspressoStep.preInfusion => session.timerStartedAt,
+      EspressoStep.extracting => session.extractionStartedAt,
+      _ => null,
+    };
+    return started == null ? null : now().difference(started);
   }
 
   void _act(void Function() action) {

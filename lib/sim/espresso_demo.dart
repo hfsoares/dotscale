@@ -23,8 +23,8 @@ class MemoryContainerStore implements ContainerStore {
 Duration _s(num seconds) => Duration(milliseconds: (seconds * 1000).round());
 
 /// Espresso completo: 18,2 g de grãos, 17,9 g de pó no copinho, pré-infusão de 8 s e 36,1 g de bebida
-/// em 27 s; no fim a balança e a xícara saem da Gaggia juntas.
-List<SimSegment> espressoDemo({required void Function() pressStart}) => [
+/// em 27 s; no fim a balança e a xícara saem da Gaggia juntas e o resumo é fechado.
+List<SimSegment> espressoDemo({required void Function() pressStart, required void Function() pressFinish}) => [
   SimSegment.hold(0, _s(3), mark: '01-ocioso'),
   SimSegment(0, 80, _s(0.4)),
   SimSegment.hold(80, _s(3), mark: '02-dosimetro'),
@@ -48,4 +48,5 @@ List<SimSegment> espressoDemo({required void Function() pressStart}) => [
   SimSegment(30, 190, _s(0.3)),
   SimSegment(190, 156.1, _s(0.4)),
   SimSegment.hold(156.1, _s(4), mark: '13-resultado-fora-da-gaggia'),
+  SimSegment.hold(156.1, _s(3), mark: '14-finalizado', action: pressFinish),
 ];

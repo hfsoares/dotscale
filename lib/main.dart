@@ -17,7 +17,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   late final EspressoController espresso;
   final ScaleConnection connection = _simulate
-      ? SimulatedDotConnection(espressoDemo(pressStart: () => espresso.startTimer()))
+      ? SimulatedDotConnection(
+          espressoDemo(pressStart: () => espresso.startTimer(), pressFinish: () => espresso.dismissResult()),
+        )
       : FbpDotConnection();
   // O celular fica ao lado da máquina: tela acesa só enquanto a balança transmite.
   final controller = ScaleController(connection, onLiveChanged: (live) => WakelockPlus.toggle(enable: live));

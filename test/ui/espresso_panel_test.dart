@@ -80,15 +80,16 @@ void main() {
     expect(find.text('Cadastrar recipiente'), findsOneWidget);
   });
 
-  testWidgets('idle não tem instrução e mostra Tarar habilitado', (tester) async {
+  testWidgets('idle não tem instrução e mostra Tarar habilitado, sem ícone', (tester) async {
     await pump(tester);
     await hold(tester, 0);
     expect(find.text('Coloque o dosímetro'), findsNothing);
     expect(button(tester, 'Tarar').onPressed, isNotNull);
+    expect(find.byIcon(Icons.exposure_zero), findsNothing);
     await finish(tester);
   });
 
-  testWidgets('fluxo até a xícara mostra Iniciar e esconde Tarar', (tester) async {
+  testWidgets('fluxo até a xícara mostra Pré-infusão grande e esconde Tarar', (tester) async {
     await pump(tester);
     await hold(tester, 0);
     await hold(tester, 80);
@@ -104,20 +105,45 @@ void main() {
     expect(find.textContaining('Balança'), findsNothing);
     await hold(tester, 0);
     await hold(tester, 120);
-    expect(find.text('Pronto — inicie a extração'), findsOneWidget);
-    expect(button(tester, 'Iniciar').onPressed, isNotNull);
+    expect(find.text('Pronto — inicie a pré-infusão'), findsOneWidget);
+    expect(button(tester, 'Pré-infusão').onPressed, isNotNull);
+    expect(find.text('Iniciar'), findsNothing);
+    expect(tester.getSize(find.widgetWithText(FilledButton, 'Pré-infusão')).height, greaterThanOrEqualTo(88));
     expect(find.text('Tarar'), findsNothing);
     await finish(tester);
   });
 
-  testWidgets('durante a extração mostra ratio e cronômetro', (tester) async {
+  testWidgets('durante a extração bebida, ratio e tempo têm o mesmo destaque', (tester) async {
     await pump(tester);
     await toCup(tester);
     await hold(tester, 120, readings: 10);
     await ramp(tester, 120, 138, 100);
     expect(find.text('Extraindo'), findsOneWidget);
-    expect(find.text('1:1.0'), findsOneWidget);
-    expect(find.textContaining(RegExp(r'^\d+\.\d s$')), findsOneWidget);
+    expect(find.text('Bebida'), findsOneWidget);
+    expect(find.text('Ratio'), findsOneWidget);
+    expect(find.text('Tempo'), findsOneWidget);
+    final values = [find.text('18.0 g'), find.text('1:1.0'), find.textContaining(RegExp(r'^\d+\.\d s$'))];
+    final heights = [for (final v in values) tester.getSize(v).height];
+    expect(heights.every((h) => (h - heights.first).abs() < 1), isTrue, reason: '$heights');
+    expect(find.text('138.0 g'), findsNothing);
+    await finish(tester);
+  });
+
+  testWidgets('pré-infusão conta o próprio tempo e Infusão inicia a extração', (tester) async {
+    await pump(tester);
+    await toCup(tester);
+    await tester.tap(find.text('Pré-infusão'));
+    await tester.pump();
+    t = t.add(const Duration(seconds: 4));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.text('Tempo'), findsOneWidget);
+    expect(find.text('4.0 s'), findsOneWidget);
+    expect(tester.getSize(find.widgetWithText(FilledButton, 'Infusão')).height, greaterThanOrEqualTo(88));
+    await tester.tap(find.text('Infusão'));
+    await tester.pump();
+    expect(find.text('Extraindo'), findsOneWidget);
+    expect(find.text('Infusão'), findsNothing);
+    expect(find.text('0.0 s'), findsOneWidget); // o tempo agora é o da extração
     await finish(tester);
   });
 
@@ -131,7 +157,14 @@ void main() {
     expect(find.text('17.8 g'), findsOneWidget);
     expect(find.text('35.6 g'), findsOneWidget);
     expect(find.textContaining('Extração'), findsOneWidget);
+    expect(find.text('Tarar'), findsNothing);
+    expect(find.text('155.6 g'), findsNothing); // sem o peso grande
+    expect(find.textContaining('g/s'), findsNothing);
+    await tester.tap(find.text('Finalizar'));
+    await tester.pump();
+    expect(find.text('Último espresso'), findsNothing);
     expect(find.text('Tarar'), findsOneWidget);
+    expect(find.text('155.6 g'), findsOneWidget);
     await finish(tester);
   });
 
@@ -153,7 +186,7 @@ void main() {
     await tester.tap(find.text('Cancelar'));
     await tester.pump();
     expect(find.text('Tarar'), findsOneWidget);
-    expect(find.text('Pronto — inicie a extração'), findsNothing);
+    expect(find.text('Pronto — inicie a pré-infusão'), findsNothing);
     final screen = tester.getSize(find.byType(Scaffold)).width;
     expect(tester.getCenter(find.text('Tarar')).dx, closeTo(screen / 2, 30));
     await finish(tester);
