@@ -131,7 +131,7 @@ void main() {
 
   testWidgets('na largura do celular, os três números ficam empilhados e grandes', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
-    tester.view.devicePixelRatio = 3;
+    tester.view.devicePixelRatio = 3.1875; // densidade 510 do Galaxy S24
     addTearDown(tester.view.reset);
     await pump(tester);
     await toCup(tester);
@@ -154,9 +154,35 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('pré-infusão cabe na tela do celular sem rolar', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 3.1875; // densidade 510 do Galaxy S24
+    tester.view.padding = const FakeViewPadding(top: 120, bottom: 144); // barra de status e de navegação
+    addTearDown(tester.view.reset);
+    await pump(tester);
+    await toCup(tester);
+    await tester.tap(find.text('Pré-infusão'));
+    await tester.pump();
+    final scroll = tester.state<ScrollableState>(find.byType(Scrollable).first);
+    expect(scroll.position.maxScrollExtent, 0);
+    await finish(tester);
+  });
+
+  testWidgets('em tela larga os números não crescem além do tamanho deles', (tester) async {
+    tester.view.physicalSize = const Size(2400, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pump(tester);
+    await toCup(tester);
+    await hold(tester, 120, readings: 10);
+    await ramp(tester, 120, 138, 100);
+    expect(tester.getSize(find.text('1:1.0')).height, lessThanOrEqualTo(72));
+    await finish(tester);
+  });
+
   testWidgets('pré-infusão conta o próprio tempo e Infusão inicia a extração', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
-    tester.view.devicePixelRatio = 3;
+    tester.view.devicePixelRatio = 3.1875; // densidade 510 do Galaxy S24
     addTearDown(tester.view.reset);
     await pump(tester);
     await toCup(tester);

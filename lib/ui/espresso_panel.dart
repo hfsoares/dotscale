@@ -170,6 +170,7 @@ class _Metric extends StatelessWidget {
         ),
         Expanded(
           child: FittedBox(
+            fit: BoxFit.scaleDown,
             alignment: Alignment.centerRight,
             child: Text.rich(
               TextSpan(
